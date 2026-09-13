@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-13
 
-Public page: https://likohd.github.io/WecomBetter/privacy.html
+Public page: https://fableai.github.io/WecomBetter/privacy.html
 
 WecomBetter is a Chrome extension for WeCom Docs (https://doc.weixin.qq.com/). We do not run our own servers and do not collect personal data for ourselves.
 
@@ -24,7 +24,7 @@ No accounts, no ads, no analytics, and no selling or sharing data with other par
 
 ## Contact
 
-https://github.com/LikoHD/WecomBetter/issues
+https://github.com/fableai/WecomBetter/issues
 
 ---
 
