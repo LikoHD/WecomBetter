@@ -1,0 +1,29 @@
+---
+description: WecomBetter / 企微搭子 的打包与改法，避免 content script 误用 ESM
+alwaysApply: true
+---
+
+# WecomBetter 改法
+
+Manifest 里声明的 content script（MAIN / ISOLATED）都是经典脚本，**不能写 `import`**。`"type": "module"` 只对 service worker 和扩展页有效；写在 `content_scripts` 上会被忽略，文档页会报 `Cannot use import statement outside a module`。
+
+## 两份 IIFE
+
+源码可以继续用 ESM 拆文件，注入必须走打包产物：
+
+- MAIN：`src/page-bridge.js` → `dist/page-bridge.iife.js`（过企微 CSP）
+- Isolated：`src/content.js`（会打进 `refs.js` / `viewers.js` / `search.js` / `toolbar.js` / `shared.js`）→ `dist/content.iife.js`
+
+改完上述任一文件后：`npm run build` → `chrome://extensions` 重新加载 → 文档页硬刷新。完整清单见 `docs/打包注意事项.md`。
+
+## 不用打包
+
+- `src/page/styles/*.css`：manifest 直接挂
+- `src/popup/*`：扩展页，可用 `<script type="module">`
+- `src/background/service-worker.js`：可用 `"type": "module"`
+
+## 禁止
+
+- 不要给 `content_scripts` 加 `"type": "module"`
+- 不要在 MAIN 里用 `import`，也不要往页面 DOM 插 `chrome-extension://` 脚本
+- 不要只改 `src` 不打包就让用户重载

@@ -1,0 +1,1547 @@
+{
+  "source_weui": "https://github.com/weui/weui-icon",
+  "source_official": "https://developer.work.weixin.qq.com/document/path/90306",
+  "note": "你给的企微智能文档需要登录。这套包含官方 WeUI 图标 SVG + 开发者中心设计资源。",
+  "weui_count": 162,
+  "official_count": 13,
+  "weui": [
+    {
+      "token": "add-friends-filled",
+      "name": "add-friends",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/add-friends.svg",
+      "file": "wecom/weui/filled/add-friends.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "add-filled",
+      "name": "add",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/add.svg",
+      "file": "wecom/weui/filled/add.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "add2-filled",
+      "name": "add2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/add2.svg",
+      "file": "wecom/weui/filled/add2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "album-filled",
+      "name": "album",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/album.svg",
+      "file": "wecom/weui/filled/album.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "arrow-filled",
+      "name": "arrow",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/arrow.svg",
+      "file": "wecom/weui/filled/arrow.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "at-filled",
+      "name": "at",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/at.svg",
+      "file": "wecom/weui/filled/at.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "back-filled",
+      "name": "back",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/back.svg",
+      "file": "wecom/weui/filled/back.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "back2-filled",
+      "name": "back2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/back2.svg",
+      "file": "wecom/weui/filled/back2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "bellring-off-filled",
+      "name": "bellring-off",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/bellring-off.svg",
+      "file": "wecom/weui/filled/bellring-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "bellring-on-filled",
+      "name": "bellring-on",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/bellring-on.svg",
+      "file": "wecom/weui/filled/bellring-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "camera-filled",
+      "name": "camera",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/camera.svg",
+      "file": "wecom/weui/filled/camera.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "cellphone-filled",
+      "name": "cellphone",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/cellphone.svg",
+      "file": "wecom/weui/filled/cellphone.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "clip-filled",
+      "name": "clip",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/clip.svg",
+      "file": "wecom/weui/filled/clip.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "close-filled",
+      "name": "close",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/close.svg",
+      "file": "wecom/weui/filled/close.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "close2-filled",
+      "name": "close2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/close2.svg",
+      "file": "wecom/weui/filled/close2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "comment-filled",
+      "name": "comment",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/comment.svg",
+      "file": "wecom/weui/filled/comment.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "contacts-filled",
+      "name": "contacts",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/contacts.svg",
+      "file": "wecom/weui/filled/contacts.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "copy-filled",
+      "name": "copy",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/copy.svg",
+      "file": "wecom/weui/filled/copy.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "delete-on-filled",
+      "name": "delete-on",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/delete-on.svg",
+      "file": "wecom/weui/filled/delete-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "delete-filled",
+      "name": "delete",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/delete.svg",
+      "file": "wecom/weui/filled/delete.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "discover-filled",
+      "name": "discover",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/discover.svg",
+      "file": "wecom/weui/filled/discover.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "display-filled",
+      "name": "display",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/display.svg",
+      "file": "wecom/weui/filled/display.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "done-filled",
+      "name": "done",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/done.svg",
+      "file": "wecom/weui/filled/done.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "done2-filled",
+      "name": "done2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/done2.svg",
+      "file": "wecom/weui/filled/done2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "download-filled",
+      "name": "download",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/download.svg",
+      "file": "wecom/weui/filled/download.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "email-filled",
+      "name": "email",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/email.svg",
+      "file": "wecom/weui/filled/email.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "error-filled",
+      "name": "error",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/error.svg",
+      "file": "wecom/weui/filled/error.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "eyes-off-filled",
+      "name": "eyes-off",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/eyes-off.svg",
+      "file": "wecom/weui/filled/eyes-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "eyes-on-filled",
+      "name": "eyes-on",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/eyes-on.svg",
+      "file": "wecom/weui/filled/eyes-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "folder-filled",
+      "name": "folder",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/folder.svg",
+      "file": "wecom/weui/filled/folder.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "group-detail-filled",
+      "name": "group-detail",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/group-detail.svg",
+      "file": "wecom/weui/filled/group-detail.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "help-filled",
+      "name": "help",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/help.svg",
+      "file": "wecom/weui/filled/help.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "home-filled",
+      "name": "home",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/home.svg",
+      "file": "wecom/weui/filled/home.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "imac-filled",
+      "name": "imac",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/imac.svg",
+      "file": "wecom/weui/filled/imac.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "info-filled",
+      "name": "info",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/info.svg",
+      "file": "wecom/weui/filled/info.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "keyboard-filled",
+      "name": "keyboard",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/keyboard.svg",
+      "file": "wecom/weui/filled/keyboard.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "like-filled",
+      "name": "like",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/like.svg",
+      "file": "wecom/weui/filled/like.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "link-filled",
+      "name": "link",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/link.svg",
+      "file": "wecom/weui/filled/link.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "location-filled",
+      "name": "location",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/location.svg",
+      "file": "wecom/weui/filled/location.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "lock-filled",
+      "name": "lock",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/lock.svg",
+      "file": "wecom/weui/filled/lock.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "max-window-filled",
+      "name": "max-window",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/max-window.svg",
+      "file": "wecom/weui/filled/max-window.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "me-filled",
+      "name": "me",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/me.svg",
+      "file": "wecom/weui/filled/me.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mike-filled",
+      "name": "mike",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/mike.svg",
+      "file": "wecom/weui/filled/mike.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mike2-filled",
+      "name": "mike2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/mike2.svg",
+      "file": "wecom/weui/filled/mike2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mobile-contacts-filled",
+      "name": "mobile-contacts",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/mobile-contacts.svg",
+      "file": "wecom/weui/filled/mobile-contacts.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "more-filled",
+      "name": "more",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/more.svg",
+      "file": "wecom/weui/filled/more.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "more2-filled",
+      "name": "more2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/more2.svg",
+      "file": "wecom/weui/filled/more2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mosaic-filled",
+      "name": "mosaic",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/mosaic.svg",
+      "file": "wecom/weui/filled/mosaic.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "music-off-filled",
+      "name": "music-off",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/music-off.svg",
+      "file": "wecom/weui/filled/music-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "music-filled",
+      "name": "music",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/music.svg",
+      "file": "wecom/weui/filled/music.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "note-filled",
+      "name": "note",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/note.svg",
+      "file": "wecom/weui/filled/note.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pad-filled",
+      "name": "pad",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/pad.svg",
+      "file": "wecom/weui/filled/pad.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pause-filled",
+      "name": "pause",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/pause.svg",
+      "file": "wecom/weui/filled/pause.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pencil-filled",
+      "name": "pencil",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/pencil.svg",
+      "file": "wecom/weui/filled/pencil.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "photo-wall-filled",
+      "name": "photo-wall",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/photo-wall.svg",
+      "file": "wecom/weui/filled/photo-wall.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "play-filled",
+      "name": "play",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/play.svg",
+      "file": "wecom/weui/filled/play.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "play2-filled",
+      "name": "play2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/play2.svg",
+      "file": "wecom/weui/filled/play2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "previous-filled",
+      "name": "previous",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/previous.svg",
+      "file": "wecom/weui/filled/previous.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "previous2-filled",
+      "name": "previous2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/previous2.svg",
+      "file": "wecom/weui/filled/previous2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "qr-code-filled",
+      "name": "qr-code",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/qr-code.svg",
+      "file": "wecom/weui/filled/qr-code.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "refresh-filled",
+      "name": "refresh",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/refresh.svg",
+      "file": "wecom/weui/filled/refresh.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "report-problem-filled",
+      "name": "report-problem",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/report-problem.svg",
+      "file": "wecom/weui/filled/report-problem.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "search-filled",
+      "name": "search",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/search.svg",
+      "file": "wecom/weui/filled/search.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "sending-filled",
+      "name": "sending",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/sending.svg",
+      "file": "wecom/weui/filled/sending.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "setting-filled",
+      "name": "setting",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/setting.svg",
+      "file": "wecom/weui/filled/setting.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "share-filled",
+      "name": "share",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/share.svg",
+      "file": "wecom/weui/filled/share.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "shop-filled",
+      "name": "shop",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/shop.svg",
+      "file": "wecom/weui/filled/shop.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "star-filled",
+      "name": "star",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/star.svg",
+      "file": "wecom/weui/filled/star.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "sticker-filled",
+      "name": "sticker",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/sticker.svg",
+      "file": "wecom/weui/filled/sticker.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "tag-filled",
+      "name": "tag",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/tag.svg",
+      "file": "wecom/weui/filled/tag.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "text-filled",
+      "name": "text",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/text.svg",
+      "file": "wecom/weui/filled/text.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "time-filled",
+      "name": "time",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/time.svg",
+      "file": "wecom/weui/filled/time.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer-text-filled",
+      "name": "transfer-text",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/transfer-text.svg",
+      "file": "wecom/weui/filled/transfer-text.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer-filled",
+      "name": "transfer",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/transfer.svg",
+      "file": "wecom/weui/filled/transfer.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer2-filled",
+      "name": "transfer2",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/transfer2.svg",
+      "file": "wecom/weui/filled/transfer2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "tv-filled",
+      "name": "tv",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/tv.svg",
+      "file": "wecom/weui/filled/tv.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "video-call-filled",
+      "name": "video-call",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/video-call.svg",
+      "file": "wecom/weui/filled/video-call.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "voice-filled",
+      "name": "voice",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/voice.svg",
+      "file": "wecom/weui/filled/voice.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-down-filled",
+      "name": "volume-down",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/volume-down.svg",
+      "file": "wecom/weui/filled/volume-down.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-off-filled",
+      "name": "volume-off",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/volume-off.svg",
+      "file": "wecom/weui/filled/volume-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-up-filled",
+      "name": "volume-up",
+      "style": "filled",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/filled/volume-up.svg",
+      "file": "wecom/weui/filled/volume-up.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "add-friends-outlined",
+      "name": "add-friends",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/add-friends.svg",
+      "file": "wecom/weui/outlined/add-friends.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "add-outlined",
+      "name": "add",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/add.svg",
+      "file": "wecom/weui/outlined/add.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "add2-outlined",
+      "name": "add2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/add2.svg",
+      "file": "wecom/weui/outlined/add2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "album-outlined",
+      "name": "album",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/album.svg",
+      "file": "wecom/weui/outlined/album.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "arrow-outlined",
+      "name": "arrow",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/arrow.svg",
+      "file": "wecom/weui/outlined/arrow.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "at-outlined",
+      "name": "at",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/at.svg",
+      "file": "wecom/weui/outlined/at.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "back-outlined",
+      "name": "back",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/back.svg",
+      "file": "wecom/weui/outlined/back.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "back2-outlined",
+      "name": "back2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/back2.svg",
+      "file": "wecom/weui/outlined/back2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "bellring-off-outlined",
+      "name": "bellring-off",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/bellring-off.svg",
+      "file": "wecom/weui/outlined/bellring-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "bellring-on-outlined",
+      "name": "bellring-on",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/bellring-on.svg",
+      "file": "wecom/weui/outlined/bellring-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "camera-outlined",
+      "name": "camera",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/camera.svg",
+      "file": "wecom/weui/outlined/camera.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "cellphone-outlined",
+      "name": "cellphone",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/cellphone.svg",
+      "file": "wecom/weui/outlined/cellphone.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "clip-outlined",
+      "name": "clip",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/clip.svg",
+      "file": "wecom/weui/outlined/clip.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "close-outlined",
+      "name": "close",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/close.svg",
+      "file": "wecom/weui/outlined/close.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "close2-outlined",
+      "name": "close2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/close2.svg",
+      "file": "wecom/weui/outlined/close2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "comment-outlined",
+      "name": "comment",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/comment.svg",
+      "file": "wecom/weui/outlined/comment.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "contacts-outlined",
+      "name": "contacts",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/contacts.svg",
+      "file": "wecom/weui/outlined/contacts.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "copy-outlined",
+      "name": "copy",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/copy.svg",
+      "file": "wecom/weui/outlined/copy.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "delete-on-outlined",
+      "name": "delete-on",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/delete-on.svg",
+      "file": "wecom/weui/outlined/delete-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "delete-outlined",
+      "name": "delete",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/delete.svg",
+      "file": "wecom/weui/outlined/delete.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "discover-outlined",
+      "name": "discover",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/discover.svg",
+      "file": "wecom/weui/outlined/discover.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "display-outlined",
+      "name": "display",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/display.svg",
+      "file": "wecom/weui/outlined/display.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "done-outlined",
+      "name": "done",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/done.svg",
+      "file": "wecom/weui/outlined/done.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "done2-outlined",
+      "name": "done2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/done2.svg",
+      "file": "wecom/weui/outlined/done2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "download-outlined",
+      "name": "download",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/download.svg",
+      "file": "wecom/weui/outlined/download.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "email-outlined",
+      "name": "email",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/email.svg",
+      "file": "wecom/weui/outlined/email.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "error-outlined",
+      "name": "error",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/error.svg",
+      "file": "wecom/weui/outlined/error.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "eyes-off-outlined",
+      "name": "eyes-off",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/eyes-off.svg",
+      "file": "wecom/weui/outlined/eyes-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "eyes-on-outlined",
+      "name": "eyes-on",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/eyes-on.svg",
+      "file": "wecom/weui/outlined/eyes-on.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "folder-outlined",
+      "name": "folder",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/folder.svg",
+      "file": "wecom/weui/outlined/folder.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "group-detail-outlined",
+      "name": "group-detail",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/group-detail.svg",
+      "file": "wecom/weui/outlined/group-detail.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "help-outlined",
+      "name": "help",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/help.svg",
+      "file": "wecom/weui/outlined/help.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "home-outlined",
+      "name": "home",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/home.svg",
+      "file": "wecom/weui/outlined/home.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "imac-outlined",
+      "name": "imac",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/imac.svg",
+      "file": "wecom/weui/outlined/imac.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "info-outlined",
+      "name": "info",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/info.svg",
+      "file": "wecom/weui/outlined/info.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "keyboard-outlined",
+      "name": "keyboard",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/keyboard.svg",
+      "file": "wecom/weui/outlined/keyboard.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "like-outlined",
+      "name": "like",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/like.svg",
+      "file": "wecom/weui/outlined/like.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "link-outlined",
+      "name": "link",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/link.svg",
+      "file": "wecom/weui/outlined/link.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "location-outlined",
+      "name": "location",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/location.svg",
+      "file": "wecom/weui/outlined/location.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "lock-outlined",
+      "name": "lock",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/lock.svg",
+      "file": "wecom/weui/outlined/lock.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "max-window-outlined",
+      "name": "max-window",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/max-window.svg",
+      "file": "wecom/weui/outlined/max-window.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "me-outlined",
+      "name": "me",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/me.svg",
+      "file": "wecom/weui/outlined/me.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mike-outlined",
+      "name": "mike",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/mike.svg",
+      "file": "wecom/weui/outlined/mike.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mike2-outlined",
+      "name": "mike2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/mike2.svg",
+      "file": "wecom/weui/outlined/mike2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mobile-contacts-outlined",
+      "name": "mobile-contacts",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/mobile-contacts.svg",
+      "file": "wecom/weui/outlined/mobile-contacts.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "more-outlined",
+      "name": "more",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/more.svg",
+      "file": "wecom/weui/outlined/more.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "more2-outlined",
+      "name": "more2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/more2.svg",
+      "file": "wecom/weui/outlined/more2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "mosaic-outlined",
+      "name": "mosaic",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/mosaic.svg",
+      "file": "wecom/weui/outlined/mosaic.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "music-off-outlined",
+      "name": "music-off",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/music-off.svg",
+      "file": "wecom/weui/outlined/music-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "music-outlined",
+      "name": "music",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/music.svg",
+      "file": "wecom/weui/outlined/music.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "note-outlined",
+      "name": "note",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/note.svg",
+      "file": "wecom/weui/outlined/note.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pad-outlined",
+      "name": "pad",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/pad.svg",
+      "file": "wecom/weui/outlined/pad.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pause-outlined",
+      "name": "pause",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/pause.svg",
+      "file": "wecom/weui/outlined/pause.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "pencil-outlined",
+      "name": "pencil",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/pencil.svg",
+      "file": "wecom/weui/outlined/pencil.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "photo-wall-outlined",
+      "name": "photo-wall",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/photo-wall.svg",
+      "file": "wecom/weui/outlined/photo-wall.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "play-outlined",
+      "name": "play",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/play.svg",
+      "file": "wecom/weui/outlined/play.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "play2-outlined",
+      "name": "play2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/play2.svg",
+      "file": "wecom/weui/outlined/play2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "previous-outlined",
+      "name": "previous",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/previous.svg",
+      "file": "wecom/weui/outlined/previous.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "previous2-outlined",
+      "name": "previous2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/previous2.svg",
+      "file": "wecom/weui/outlined/previous2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "qr-code-outlined",
+      "name": "qr-code",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/qr-code.svg",
+      "file": "wecom/weui/outlined/qr-code.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "refresh-outlined",
+      "name": "refresh",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/refresh.svg",
+      "file": "wecom/weui/outlined/refresh.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "report-problem-outlined",
+      "name": "report-problem",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/report-problem.svg",
+      "file": "wecom/weui/outlined/report-problem.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "search-outlined",
+      "name": "search",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/search.svg",
+      "file": "wecom/weui/outlined/search.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "sending-outlined",
+      "name": "sending",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/sending.svg",
+      "file": "wecom/weui/outlined/sending.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "setting-outlined",
+      "name": "setting",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/setting.svg",
+      "file": "wecom/weui/outlined/setting.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "share-outlined",
+      "name": "share",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/share.svg",
+      "file": "wecom/weui/outlined/share.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "shop-outlined",
+      "name": "shop",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/shop.svg",
+      "file": "wecom/weui/outlined/shop.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "star-outlined",
+      "name": "star",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/star.svg",
+      "file": "wecom/weui/outlined/star.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "sticker-outlined",
+      "name": "sticker",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/sticker.svg",
+      "file": "wecom/weui/outlined/sticker.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "tag-outlined",
+      "name": "tag",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/tag.svg",
+      "file": "wecom/weui/outlined/tag.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "text-outlined",
+      "name": "text",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/text.svg",
+      "file": "wecom/weui/outlined/text.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "time-outlined",
+      "name": "time",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/time.svg",
+      "file": "wecom/weui/outlined/time.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer-text-outlined",
+      "name": "transfer-text",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/transfer-text.svg",
+      "file": "wecom/weui/outlined/transfer-text.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer-outlined",
+      "name": "transfer",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/transfer.svg",
+      "file": "wecom/weui/outlined/transfer.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "transfer2-outlined",
+      "name": "transfer2",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/transfer2.svg",
+      "file": "wecom/weui/outlined/transfer2.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "tv-outlined",
+      "name": "tv",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/tv.svg",
+      "file": "wecom/weui/outlined/tv.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "video-call-outlined",
+      "name": "video-call",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/video-call.svg",
+      "file": "wecom/weui/outlined/video-call.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "voice-outlined",
+      "name": "voice",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/voice.svg",
+      "file": "wecom/weui/outlined/voice.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-down-outlined",
+      "name": "volume-down",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/volume-down.svg",
+      "file": "wecom/weui/outlined/volume-down.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-off-outlined",
+      "name": "volume-off",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/volume-off.svg",
+      "file": "wecom/weui/outlined/volume-off.svg",
+      "ok": true,
+      "error": null
+    },
+    {
+      "token": "volume-up-outlined",
+      "name": "volume-up",
+      "style": "outlined",
+      "url": "https://raw.githubusercontent.com/weui/weui-icon/master/src/assets/outlined/volume-up.svg",
+      "file": "wecom/weui/outlined/volume-up.svg",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "official": [
+    {
+      "name": "wecom-logo.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/wecom-logo.a61830413b.svg",
+      "file": "wecom/official/wecom-logo.svg",
+      "ok": true
+    },
+    {
+      "name": "wecom-icon-20.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/202201061751.dd614c96e5.svg",
+      "file": "wecom/official/wecom-icon-20.svg",
+      "ok": true
+    },
+    {
+      "name": "wecom-login-btn.png",
+      "url": "https://rescdn.qqmail.com/node/wework/images/Slice.d2258f37eb.png",
+      "file": "wecom/official/wecom-login-btn.png",
+      "ok": true
+    },
+    {
+      "name": "wecom-auth-btn.png",
+      "url": "https://rescdn.qqmail.com/node/wework/images/201711202043.cd92e5629e.png",
+      "file": "wecom/official/wecom-auth-btn.png",
+      "ok": true
+    },
+    {
+      "name": "doc-9267cb2fbe.png",
+      "url": "https://p.qpic.cn/pic_wework/4016008601/bdbb19adbc967beafdaba84007ef4883e7baf3e9e5d0aaa3/0",
+      "file": "wecom/official/doc-9267cb2fbe.png",
+      "ok": true
+    },
+    {
+      "name": "doc-8dcd10e737.png",
+      "url": "https://p.qpic.cn/pic_wework/3711464660/f8fe5ce8e6fa8c0fc1cf074fba20bf3a747f7bcbbe1efb14/0",
+      "file": "wecom/official/doc-8dcd10e737.png",
+      "ok": true
+    },
+    {
+      "name": "doc-6f2b0b4b22.png",
+      "url": "https://p.qpic.cn/pic_wework/1686071285/e4e240f4f06d9b97744d4ca8e3f3fcc8531e37bc7d46e9c8/0",
+      "file": "wecom/official/doc-6f2b0b4b22.png",
+      "ok": true
+    },
+    {
+      "name": "doc-fc8e99ca30.png",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/BackToTop.ec9811ed71.png",
+      "file": "wecom/official/doc-fc8e99ca30.png",
+      "ok": true
+    },
+    {
+      "name": "doc-83674f96c8.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/mobilekit/images/wecom-logo.6bd082181d.svg",
+      "file": "wecom/official/doc-83674f96c8.svg",
+      "ok": true
+    },
+    {
+      "name": "doc-711b999028.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/APIdeveloper2.11d17204ba.svg",
+      "file": "wecom/official/doc-711b999028.svg",
+      "ok": true
+    },
+    {
+      "name": "doc-73756b9435.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/base2.ad764ac5b4.svg",
+      "file": "wecom/official/doc-73756b9435.svg",
+      "ok": true
+    },
+    {
+      "name": "doc-3900a81acc.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/wechatDir.bd74c31978.svg",
+      "file": "wecom/official/doc-3900a81acc.svg",
+      "ok": true
+    },
+    {
+      "name": "doc-ce187453c1.svg",
+      "url": "https://wwcdn.weixin.qq.com/node/wework/images/work2.9e35fdf95d.svg",
+      "file": "wecom/official/doc-ce187453c1.svg",
+      "ok": true
+    }
+  ]
+}

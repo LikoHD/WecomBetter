@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "default_locale": "zh_CN",
+  "name": "__MSG_extName__",
+  "version": "1.0.3",
+  "description": "__MSG_extDescription__",
+  "minimum_chrome_version": "120",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "__MSG_extName__",
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://doc.weixin.qq.com/*"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://doc.weixin.qq.com/smartpage/*",
+        "https://doc.weixin.qq.com/doc/*",
+        "https://doc.weixin.qq.com/sheet/*",
+        "https://doc.weixin.qq.com/smartsheet/*",
+        "https://doc.weixin.qq.com/slide/*",
+        "https://doc.weixin.qq.com/mind/*",
+        "https://doc.weixin.qq.com/flowchart/*"
+      ],
+      "js": ["dist/page-bridge.iife.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://doc.weixin.qq.com/home/*",
+        "https://doc.weixin.qq.com/smartpage/*",
+        "https://doc.weixin.qq.com/doc/*",
+        "https://doc.weixin.qq.com/sheet/*",
+        "https://doc.weixin.qq.com/smartsheet/*",
+        "https://doc.weixin.qq.com/slide/*",
+        "https://doc.weixin.qq.com/mind/*",
+        "https://doc.weixin.qq.com/flowchart/*"
+      ],
+      "js": ["dist/content.iife.js"],
+      "css": [
+        "src/page/styles/viewers.css",
+        "src/page/styles/refs.css",
+        "src/page/styles/wander.css",
+        "src/page/styles/toolbar.css",
+        "src/page/styles/search.css",
+        "src/page/styles/doc-meta.css"
+      ],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    }
+  ]
+}

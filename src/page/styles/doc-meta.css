@@ -1,0 +1,101 @@
+#wxdoc-doc-meta {
+  box-sizing: border-box;
+  color: #8f8f8f;
+  font:
+    300 14px/22px "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Source Han Sans SC",
+    sans-serif;
+  font-weight: 300;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#wxdoc-doc-meta[data-empty="1"] {
+  display: none;
+}
+
+#wxdoc-doc-meta[data-pending="1"] {
+  visibility: hidden;
+}
+
+#wxdoc-doc-meta[data-mode="smartpage"] {
+  width: 100%;
+  margin: 10px 0 16px;
+  padding: 0 64px;
+}
+
+#wxdoc-doc-meta[data-mode="doc"] {
+  margin: 0;
+  padding: 0 4px 2px 0;
+}
+
+#wxdoc-doc-meta .wxdm-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 22px;
+}
+
+#wxdoc-doc-meta .wxdm-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-right: 10px;
+}
+
+#wxdoc-doc-meta .wxdm-avatar {
+  box-sizing: border-box;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #ececec;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#wxdoc-doc-meta .wxdm-avatar:hover,
+#wxdoc-doc-meta .wxdm-avatar:focus-visible {
+  box-shadow: 0 0 0 1.5px rgba(38, 126, 240, 0.45);
+  outline: none;
+}
+
+#wxdoc-doc-meta .wxdm-photo,
+#wxdoc-doc-meta .wxdm-fallback {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#wxdoc-doc-meta .wxdm-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8f8f8f;
+  font-size: 11px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+#wxdoc-doc-meta .wxdm-name,
+#wxdoc-doc-meta .wxdm-time {
+  color: #8f8f8f;
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+#wxdoc-doc-meta .wxdm-sep {
+  color: #c8c8c8;
+  font-weight: 300;
+}
