@@ -1,6 +1,4 @@
-# WecomBetter
-
-企微搭子，企业微信文档 Chrome 插件（Manifest V3）。从油猴脚本「企微文档 · 正在查看头像」1.10.2 迁过来。
+# WecomBetter 企微搭子
 
 打开 [企微文档](https://doc.weixin.qq.com/) 后自动工作：
 
@@ -55,11 +53,6 @@ src/background/             service worker
 4. `npm run build`
 5. 如需开关，改 `src/popup/index.html`
 
-## 图标
-
-- `icons/icon16.png` / `32` / `48`：企业微信官网 favicon
-- `icons/icon128.png`：同一套双气泡
-- Popup 行内图标来自官网 `smartdoc_fill_24` / `organization_fill_24`
 
 ## 权限
 
