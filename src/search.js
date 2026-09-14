@@ -152,7 +152,7 @@ export function postJson(path, fields) {
   return cgiPost(path, JSON.stringify(fields || {}), "application/json;charset=utf-8");
 }
 
-function asMs(value) {
+export function asMs(value) {
   const n = Number(value) || 0;
   if (!n) return 0;
   return n > 1e12 ? n : n * 1000;
@@ -378,27 +378,35 @@ export async function searchDocs(keyword, func, extra) {
   return takeFiles(unwrapBody(data).files, FETCH_LIMIT);
 }
 
-async function fetchMemberCount(docId) {
+async function postDocMemberMgr(docId, func, pick) {
+  const id = String(docId || "").trim();
+  if (!id) return null;
   const tries = [
     function () {
-      return postJson("/wedoc/doc_member_mgr", { docid: docId, func: 6 });
+      return postJson("/wedoc/doc_member_mgr", { docid: id, func });
     },
     function () {
-      return postJson("/wedoc/doc_member_mgr", { doc_id: docId, func: 6 });
+      return postJson("/wedoc/doc_member_mgr", { doc_id: id, func });
     },
     function () {
-      return postForm("/wedoc/doc_member_mgr", { docid: docId, func: "6" });
+      return postForm("/wedoc/doc_member_mgr", { docid: id, func: String(func) });
     },
   ];
   for (let i = 0; i < tries.length; i += 1) {
     try {
-      const n = readMemberCnt(await tries[i]());
-      if (n) return n;
+      const data = await tries[i]();
+      if (!requestOk(data)) continue;
+      const hit = pick(data);
+      if (hit) return hit;
     } catch {
       /* 下一组入参 */
     }
   }
-  return 0;
+  return null;
+}
+
+async function fetchMemberCount(docId) {
+  return (await postDocMemberMgr(docId, 6, readMemberCnt)) || 0;
 }
 
 function memberList(data) {
@@ -412,44 +420,24 @@ function memberList(data) {
 }
 
 export async function fetchCreatorAvatar(docId, creatorVid, englishName) {
-  const id = String(docId || "").trim();
-  if (!id) return "";
   const vid = String(creatorVid || "").trim();
   const name = String(englishName || "").trim().toLowerCase();
-  const tries = [
-    function () {
-      return postJson("/wedoc/doc_member_mgr", { docid: id, func: 1 });
-    },
-    function () {
-      return postJson("/wedoc/doc_member_mgr", { doc_id: id, func: 1 });
-    },
-    function () {
-      return postForm("/wedoc/doc_member_mgr", { docid: id, func: "1" });
-    },
-  ];
-  for (let i = 0; i < tries.length; i += 1) {
-    try {
-      const data = await tries[i]();
-      if (!requestOk(data)) continue;
-      const list = memberList(data);
-      if (!list.length) continue;
-      const hit =
-        list.find(function (item) {
-          return vid && String(item?.vid || "") === vid;
-        }) ||
-        list.find(function (item) {
-          return name && String(item?.english_name || "").toLowerCase() === name;
-        }) ||
-        list.find(function (item) {
-          return name && String(item?.name || "").toLowerCase().startsWith(`${name}(`);
-        });
-      const image = String(hit?.image || hit?.avatar || hit?.userPic || "").trim();
-      if (image) return image;
-    } catch {
-      /* 下一组入参 */
-    }
-  }
-  return "";
+  const image = await postDocMemberMgr(docId, 1, function (data) {
+    const list = memberList(data);
+    if (!list.length) return "";
+    const hit =
+      list.find(function (item) {
+        return vid && String(item?.vid || "") === vid;
+      }) ||
+      list.find(function (item) {
+        return name && String(item?.english_name || "").toLowerCase() === name;
+      }) ||
+      list.find(function (item) {
+        return name && String(item?.name || "").toLowerCase().startsWith(`${name}(`);
+      });
+    return String(hit?.image || hit?.avatar || hit?.userPic || "").trim();
+  });
+  return image || "";
 }
 
 export async function getDocMemberCount(docId) {
@@ -553,8 +541,27 @@ export async function enrichDocStats(items) {
     return item.id && !item.createdAt;
   });
   if (missingCreate.length) {
-    await Promise.all(
+    const infos = await batchGetDocInfo(
       missingCreate.map(function (item) {
+        return item.id;
+      })
+    ).catch(function () {
+      return [];
+    });
+    const byId = new Map();
+    infos.forEach(function (raw) {
+      const id = String(raw?.doc_id || raw?.id || raw?.docid || "").trim();
+      if (id) byId.set(id, raw);
+    });
+    missingCreate.forEach(function (item) {
+      const raw = byId.get(item.id);
+      if (raw) applyInfoFields(item, raw);
+    });
+    const still = missingCreate.filter(function (item) {
+      return !item.createdAt;
+    });
+    await Promise.all(
+      still.map(function (item) {
         return getDocCreateTime(item.id)
           .then(function (ts) {
             if (ts) item.createdAt = ts;

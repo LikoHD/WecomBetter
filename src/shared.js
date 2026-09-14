@@ -83,6 +83,17 @@ export function parseDocPath(pathname) {
   return matched ? { kind: matched[1].toLowerCase(), id: matched[2] } : null;
 }
 
+export function isOwnDoc(meta) {
+  if (!meta) return false;
+  if (meta.isSelf) return true;
+  const name = String(meta.name || "").trim().toLowerCase();
+  const viewer = String(meta.viewerId || "").trim().toLowerCase();
+  if (name && viewer && name === viewer) return true;
+  const vid = String(meta.creatorVid || "").trim();
+  const selfVid = String(meta.selfVid || "").trim();
+  return Boolean(vid && selfVid && vid === selfVid);
+}
+
 export function parseDocUrl(url) {
   const raw = String(url || "").trim();
   if (!raw) return null;

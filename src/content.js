@@ -46,6 +46,7 @@ let last = {
 };
 let contentReadyFor = "";
 let lastPageKey = "";
+let applyRetryTimer = 0;
 
 function pageContentReady() {
   const id = currentPageKey();
@@ -62,6 +63,8 @@ function apply() {
   if (lastPageKey && lastPageKey !== page) {
     contentReadyFor = "";
     resetFooterGate();
+    window.clearTimeout(applyRetryTimer);
+    applyRetryTimer = 0;
   }
   lastPageKey = page;
   if (isHomePage()) {
@@ -131,7 +134,9 @@ function apply() {
     !hideBox &&
     (!document.getElementById(FOOTER_ROOT_ID) || footerPending())
   ) {
-    window.setTimeout(function () {
+    window.clearTimeout(applyRetryTimer);
+    applyRetryTimer = window.setTimeout(function () {
+      applyRetryTimer = 0;
       if (
         extensionAlive() &&
         !shouldHideDocFooter(last.docMeta) &&

@@ -1,6 +1,7 @@
 (() => {
   // src/shared.js
   var MSG_SOURCE = "wecom-better";
+  var ROOT_ID = "wxdoc-online-viewers";
   var REFS_ROOT_ID = "wxdoc-ref-docs";
   var FOOTER_ROOT_ID = "wxdoc-doc-footer";
   var FOOTER_SPACE_ID = "wxdoc-doc-footer-space";
@@ -10,6 +11,7 @@
   var SEARCH_SETTINGS_ID = "wxdoc-quick-search-settings";
   var CREATE_PLUS_ID = "wxdoc-create-plus";
   var DOC_META_ROOT_ID = "wxdoc-doc-meta";
+  var FLOAT_LAYER_ID = "wxov-float-layer";
   var SILENT_PANEL_CLASS = "wxov-silent-panel";
   var POLL_MS = 1200;
   var DOC_HOST = "doc.weixin.qq.com";
@@ -49,6 +51,16 @@
   function parseDocPath(pathname) {
     const matched = String(pathname || "").match(DOC_PATH_RE);
     return matched ? { kind: matched[1].toLowerCase(), id: matched[2] } : null;
+  }
+  function isOwnDoc(meta) {
+    if (!meta) return false;
+    if (meta.isSelf) return true;
+    const name = String(meta.name || "").trim().toLowerCase();
+    const viewer = String(meta.viewerId || "").trim().toLowerCase();
+    if (name && viewer && name === viewer) return true;
+    const vid = String(meta.creatorVid || "").trim();
+    const selfVid = String(meta.selfVid || "").trim();
+    return Boolean(vid && selfVid && vid === selfVid);
   }
   function parseDocUrl(url) {
     const raw = String(url || "").trim();
@@ -183,6 +195,106 @@
     listenTarget(editor?._layoutTypeManager, ["change", "layout", "update"], schedulePublish);
     listenTarget(xEditor, ["change", "dataChange", "transaction"], schedulePublish);
     listenTarget(xEditor?.dataCore, ["update", "change", "transaction"], schedulePublish);
+  }
+  var MEMBER_OPEN_CLASS = "wxov-member-open";
+  var memberTipArmed = false;
+  function markHiddenTip(el) {
+    if (!el || el.getAttribute("data-wxov-native-tip") === "1") return;
+    el.setAttribute("data-wxov-native-tip", "1");
+    el.style.setProperty("display", "none", "important");
+    el.style.setProperty("visibility", "hidden", "important");
+    el.style.setProperty("pointer-events", "none", "important");
+  }
+  function looksLikeMemberTipCard(el) {
+    if (!(el instanceof Element)) return false;
+    if (el.closest(`#${ROOT_ID}, #${FLOAT_LAYER_ID}`)) return false;
+    if (el.closest(".ent-collab-panel, .collab-list")) return false;
+    const text = String(el.textContent || "").replace(/\s+/g, "");
+    if (!/名成员/.test(text) || !/正在查看/.test(text)) return false;
+    if (text.length > 280) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 560 || rect.height > 280) return false;
+    return true;
+  }
+  function hideNativeMemberTips() {
+    const nodes = document.querySelectorAll(
+      '[role="tooltip"], [class*="tooltip"], [class*="Tooltip"], [class*="popover"], [class*="popup"], [class*="overlay"], [class*="float"]'
+    );
+    for (let i = 0; i < nodes.length; i += 1) {
+      if (looksLikeMemberTipCard(nodes[i])) markHiddenTip(nodes[i]);
+    }
+    if (!document.body) return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node) {
+      const value = node.nodeValue || "";
+      if (value.includes("\u540D\u6210\u5458") || value.includes("\u6B63\u5728\u67E5\u770B")) {
+        let el = node.parentElement;
+        for (let depth = 0; el && depth < 6; depth += 1) {
+          if (looksLikeMemberTipCard(el)) {
+            markHiddenTip(el);
+            break;
+          }
+          el = el.parentElement;
+        }
+      }
+      node = walker.nextNode();
+    }
+  }
+  function mutationHasMemberTip(mutations) {
+    for (let i = 0; i < mutations.length; i += 1) {
+      const added = mutations[i].addedNodes;
+      for (let j = 0; j < added.length; j += 1) {
+        const node = added[j];
+        const text = node.nodeType === 1 ? node.textContent : node.nodeValue;
+        if (text && (text.includes("\u540D\u6210\u5458") || text.includes("\u6B63\u5728\u67E5\u770B"))) return true;
+      }
+    }
+    return false;
+  }
+  function overMemberChrome(el) {
+    return Boolean(
+      el && el.closest && el.closest(`#${ROOT_ID}, #headerbar-member, .ent-collab-users, .member-wrapper`)
+    );
+  }
+  function bindNativeMemberTipMute() {
+    if (bindNativeMemberTipMute.done) return;
+    bindNativeMemberTipMute.done = true;
+    document.addEventListener(
+      "mouseover",
+      function(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !overMemberChrome(target)) return;
+        memberTipArmed = true;
+        hideNativeMemberTips();
+      },
+      true
+    );
+    document.addEventListener(
+      "mouseout",
+      function(event) {
+        const next = event.relatedTarget;
+        if (next instanceof Element && overMemberChrome(next)) return;
+        memberTipArmed = false;
+      },
+      true
+    );
+    document.addEventListener(
+      "click",
+      function(event) {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (document.documentElement.classList.contains(SILENT_PANEL_CLASS)) return;
+        if (target.closest(".ent-collab-users") && !target.closest(`#${ROOT_ID}`)) {
+          document.documentElement.classList.add(MEMBER_OPEN_CLASS);
+          return;
+        }
+        if (!target.closest(".ent-collab-panel, .member-wrapper, .collab-list")) {
+          document.documentElement.classList.remove(MEMBER_OPEN_CLASS);
+        }
+      },
+      true
+    );
   }
   function revealNativePanel() {
     document.documentElement.classList.remove(SILENT_PANEL_CLASS);
@@ -460,12 +572,11 @@
     ).trim();
     const selfVid = String(self.vid || self.userId || "").trim();
     let name = parsed.id || "";
-    let isSelf = Boolean(file?.isSelf || cv.isCreator);
-    if (isSelf) {
+    const fromFlag = Boolean(file?.isSelf || cv.isCreator);
+    if (fromFlag) {
       name = String(self.englishName || self.english_name || name).trim() || name;
     }
-    if (!isSelf && name && viewerId && name.toLowerCase() === viewerId.toLowerCase()) isSelf = true;
-    if (!isSelf && creatorVid && selfVid && creatorVid === selfVid) isSelf = true;
+    const isSelf = fromFlag || isOwnDoc({ name, viewerId, creatorVid, selfVid });
     let avatar = "";
     if (isSelf) {
       avatar = String(self.userPic || self.avatar || cv.userPic || "").trim();
@@ -641,6 +752,7 @@
   document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
   window.addEventListener("message", onCreateMessage);
   hookHistory();
+  bindNativeMemberTipMute();
   publish();
   window.setTimeout(primeViewersIfNeeded, 800);
   window.setTimeout(primeViewersIfNeeded, 2400);
@@ -655,6 +767,7 @@
     return [...mutation.addedNodes, ...mutation.removedNodes].every(ours);
   }
   new MutationObserver(function(mutations) {
+    if (memberTipArmed || mutationHasMemberTip(mutations)) hideNativeMemberTips();
     if (mutations.every(mutationFromOurUi)) return;
     schedulePublish();
   }).observe(document.documentElement, {

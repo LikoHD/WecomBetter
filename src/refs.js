@@ -1,5 +1,5 @@
-import { enrichDocStats, formatDocDate } from "./search.js";
-import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_MAX_VISIBLE, REFS_ROOT_ID, WANDER_ROOT_ID, parseDocPath } from "./shared.js";
+import { asMs, currentDocId, enrichDocStats, formatDocDate } from "./search.js";
+import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_MAX_VISIBLE, REFS_ROOT_ID, WANDER_ROOT_ID, isOwnDoc, parseDocPath } from "./shared.js";
 
 const ICONS = {
   smartpage:
@@ -92,7 +92,7 @@ function findCanvas(host) {
 }
 
 function blockText(el) {
-  return String(el?.innerText || el?.textContent || "")
+  return String(el?.textContent || "")
     .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -106,14 +106,8 @@ function isPlaceholderBodyText(text) {
   return /^(输入正文|输入文字|输入内容|点击输入|键入文字|\/)$/.test(String(text || "").trim());
 }
 
-function asTime(ts) {
-  const n = Number(ts) || 0;
-  if (!n) return 0;
-  return n > 1e12 ? n : n * 1000;
-}
-
 function isCreatedToday(ts) {
-  const ms = asTime(ts);
+  const ms = asMs(ts);
   if (!ms) return false;
   const date = new Date(ms);
   if (Number.isNaN(date.getTime())) return false;
@@ -125,31 +119,23 @@ function isCreatedToday(ts) {
   );
 }
 
-function isViewerCreator(meta) {
-  if (!meta) return false;
-  if (meta.isSelf) return true;
-  const name = String(meta.name || "").trim().toLowerCase();
-  const viewer = String(meta.viewerId || "").trim().toLowerCase();
-  return Boolean(name && viewer && name === viewer);
-}
-
 export function isBlankEditorPage() {
   const kind = parseDocPath(location.pathname)?.kind;
   if (kind === "smartpage") {
     const editable = document.getElementById("root-editable");
     if (!editable) return true;
     const titleEl = editable.querySelector(".sc-text-input-content, .textInput__pIjhc");
-    let body = 0;
-    editable.querySelectorAll(".sc-block-wrapper").forEach(function (el) {
-      if (titleEl && (el === titleEl || el.contains(titleEl))) return;
+    const blocks = editable.querySelectorAll(".sc-block-wrapper");
+    for (let i = 0; i < blocks.length; i += 1) {
+      const el = blocks[i];
+      if (titleEl && (el === titleEl || el.contains(titleEl))) continue;
       if (/sc-block-(image|video|file|embed|simple_table|table|smartsheet|sheet)/.test(String(el.className))) {
-        body += 1;
-        return;
+        return false;
       }
       const text = blockText(el);
-      if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) body += 1;
-    });
-    return body === 0;
+      if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) return false;
+    }
+    return true;
   }
   return false;
 }
@@ -157,7 +143,7 @@ export function isBlankEditorPage() {
 export function shouldHideDocFooter(meta) {
   if (!isBlankEditorPage()) return false;
   if (!meta) return true;
-  if (!isViewerCreator(meta)) return false;
+  if (!isOwnDoc(meta)) return false;
   if (!meta.createdAt) return true;
   return isCreatedToday(meta.createdAt);
 }
@@ -205,10 +191,6 @@ export function resetFooterGate() {
   }
   const spacer = document.getElementById(FOOTER_SPACE_ID);
   if (spacer) spacer.setAttribute("data-pending", "1");
-}
-
-function currentDocId() {
-  return parseDocPath(location.pathname)?.id || "";
 }
 
 export function currentPageKey() {
@@ -360,10 +342,6 @@ function placeSpacer(footer) {
   spacer.hidden = footer.getAttribute("data-empty") === "1";
 }
 
-function isColEmpty(el) {
-  return !el || el.getAttribute("data-empty") !== "0";
-}
-
 export function syncFooterEmpty(footer) {
   const node = footer || findHeld(FOOTER_ROOT_ID);
   if (!node) return;
@@ -459,7 +437,7 @@ function ensureCloseBtn(footer) {
 export function ensureFooter() {
   if (isFooterDismissed()) {
     hideFooter();
-    return heldFooter || document.createElement("div");
+    return null;
   }
   let footer = document.getElementById(FOOTER_ROOT_ID) || heldFooter;
   if (!footer) {
@@ -636,7 +614,9 @@ function enrichRefStats(items) {
 export function paintWanderCol(items, options) {
   if (isFooterDismissed()) return;
   const footer = ensureFooter();
+  if (!footer) return;
   const root = findHeld(WANDER_ROOT_ID);
+  if (!root) return;
   const list = Array.isArray(items) ? items : [];
   const opts = options && typeof options === "object" ? options : {};
   const loading = Boolean(opts.loading);

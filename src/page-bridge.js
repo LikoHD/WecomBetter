@@ -7,12 +7,14 @@ import {
   CREATE_SMARTPAGE_EVENT,
   CREATE_SMARTPAGE_MSG,
   DOC_META_ROOT_ID,
+  FLOAT_LAYER_ID,
   FOOTER_ROOT_ID,
   FOOTER_SPACE_ID,
   HELLO_EVENT,
   MSG_SOURCE,
   POLL_MS,
   REFS_ROOT_ID,
+  ROOT_ID,
   SEARCH_PANEL_ID,
   SEARCH_SETTINGS_ID,
   SEARCH_ROOT_ID,
@@ -21,6 +23,7 @@ import {
   WANDER_ROOT_ID,
   asUserList,
   findVisibleCollabButton,
+  isOwnDoc,
   parseDocPath,
   parseDocUrl,
   parseLabel,
@@ -159,6 +162,115 @@ function hookEditorUpdates() {
   listenTarget(editor?._layoutTypeManager, ["change", "layout", "update"], schedulePublish);
   listenTarget(xEditor, ["change", "dataChange", "transaction"], schedulePublish);
   listenTarget(xEditor?.dataCore, ["update", "change", "transaction"], schedulePublish);
+}
+
+const MEMBER_OPEN_CLASS = "wxov-member-open";
+let memberTipArmed = false;
+
+function markHiddenTip(el) {
+  if (!el || el.getAttribute("data-wxov-native-tip") === "1") return;
+  el.setAttribute("data-wxov-native-tip", "1");
+  el.style.setProperty("display", "none", "important");
+  el.style.setProperty("visibility", "hidden", "important");
+  el.style.setProperty("pointer-events", "none", "important");
+}
+
+function looksLikeMemberTipCard(el) {
+  if (!(el instanceof Element)) return false;
+  if (el.closest(`#${ROOT_ID}, #${FLOAT_LAYER_ID}`)) return false;
+  if (el.closest(".ent-collab-panel, .collab-list")) return false;
+  const text = String(el.textContent || "").replace(/\s+/g, "");
+  if (!/名成员/.test(text) || !/正在查看/.test(text)) return false;
+  if (text.length > 280) return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width > 560 || rect.height > 280) return false;
+  return true;
+}
+
+function hideNativeMemberTips() {
+  const nodes = document.querySelectorAll(
+    '[role="tooltip"], [class*="tooltip"], [class*="Tooltip"], [class*="popover"], [class*="popup"], [class*="overlay"], [class*="float"]'
+  );
+  for (let i = 0; i < nodes.length; i += 1) {
+    if (looksLikeMemberTipCard(nodes[i])) markHiddenTip(nodes[i]);
+  }
+  if (!document.body) return;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    const value = node.nodeValue || "";
+    if (value.includes("名成员") || value.includes("正在查看")) {
+      let el = node.parentElement;
+      for (let depth = 0; el && depth < 6; depth += 1) {
+        if (looksLikeMemberTipCard(el)) {
+          markHiddenTip(el);
+          break;
+        }
+        el = el.parentElement;
+      }
+    }
+    node = walker.nextNode();
+  }
+}
+
+function mutationHasMemberTip(mutations) {
+  for (let i = 0; i < mutations.length; i += 1) {
+    const added = mutations[i].addedNodes;
+    for (let j = 0; j < added.length; j += 1) {
+      const node = added[j];
+      const text = node.nodeType === 1 ? node.textContent : node.nodeValue;
+      if (text && (text.includes("名成员") || text.includes("正在查看"))) return true;
+    }
+  }
+  return false;
+}
+
+function overMemberChrome(el) {
+  return Boolean(
+    el &&
+      el.closest &&
+      el.closest(`#${ROOT_ID}, #headerbar-member, .ent-collab-users, .member-wrapper`)
+  );
+}
+
+function bindNativeMemberTipMute() {
+  if (bindNativeMemberTipMute.done) return;
+  bindNativeMemberTipMute.done = true;
+  document.addEventListener(
+    "mouseover",
+    function (event) {
+      const target = event.target;
+      if (!(target instanceof Element) || !overMemberChrome(target)) return;
+      memberTipArmed = true;
+      hideNativeMemberTips();
+    },
+    true
+  );
+  document.addEventListener(
+    "mouseout",
+    function (event) {
+      const next = event.relatedTarget;
+      if (next instanceof Element && overMemberChrome(next)) return;
+      memberTipArmed = false;
+    },
+    true
+  );
+  document.addEventListener(
+    "click",
+    function (event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (document.documentElement.classList.contains(SILENT_PANEL_CLASS)) return;
+      if (target.closest(".ent-collab-users") && !target.closest(`#${ROOT_ID}`)) {
+        document.documentElement.classList.add(MEMBER_OPEN_CLASS);
+        return;
+      }
+      if (!target.closest(".ent-collab-panel, .member-wrapper, .collab-list")) {
+        document.documentElement.classList.remove(MEMBER_OPEN_CLASS);
+      }
+    },
+    true
+  );
 }
 
 function revealNativePanel() {
@@ -469,12 +581,11 @@ function collectDocMeta(viewers) {
   ).trim();
   const selfVid = String(self.vid || self.userId || "").trim();
   let name = parsed.id || "";
-  let isSelf = Boolean(file?.isSelf || cv.isCreator);
-  if (isSelf) {
+  const fromFlag = Boolean(file?.isSelf || cv.isCreator);
+  if (fromFlag) {
     name = String(self.englishName || self.english_name || name).trim() || name;
   }
-  if (!isSelf && name && viewerId && name.toLowerCase() === viewerId.toLowerCase()) isSelf = true;
-  if (!isSelf && creatorVid && selfVid && creatorVid === selfVid) isSelf = true;
+  const isSelf = fromFlag || isOwnDoc({ name, viewerId, creatorVid, selfVid });
 
   let avatar = "";
   if (isSelf) {
@@ -695,6 +806,7 @@ document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
 window.addEventListener("message", onCreateMessage);
 hookHistory();
+bindNativeMemberTipMute();
 publish();
 window.setTimeout(primeViewersIfNeeded, 800);
 window.setTimeout(primeViewersIfNeeded, 2400);
@@ -710,6 +822,7 @@ function mutationFromOurUi(mutation) {
 }
 
 new MutationObserver(function (mutations) {
+  if (memberTipArmed || mutationHasMemberTip(mutations)) hideNativeMemberTips();
   if (mutations.every(mutationFromOurUi)) return;
   schedulePublish();
 }).observe(document.documentElement, {

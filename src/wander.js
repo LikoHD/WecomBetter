@@ -1,6 +1,6 @@
 import { ensureFooter, paintWanderCol, placeFooter, syncFooterEmpty } from "./refs.js";
 import { currentDocId, enrichDocStats, getDocMemberCount, hydrateDocStats, searchDocs } from "./search.js";
-import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_ROOT_ID, WANDER_ROOT_ID, parseDocUrl } from "./shared.js";
+import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_ROOT_ID, WANDER_ROOT_ID, isOwnDoc, parseDocUrl } from "./shared.js";
 
 const KEYWORD_POOL = 15;
 const KEYWORD_COUNT_MIN = 2;
@@ -314,14 +314,6 @@ function refreshPools(refs) {
   ui.keywordPool = filterPool(ui.keywordPool, exclude);
   ui.creatorPool = rankCreator(filterPool(ui.creatorPool, exclude));
   return exclude;
-}
-
-function isOwnDoc(meta) {
-  if (!meta) return false;
-  if (meta.isSelf) return true;
-  const name = String(meta.name || "").trim().toLowerCase();
-  const viewer = String(meta.viewerId || "").trim().toLowerCase();
-  return Boolean(name && viewer && name === viewer);
 }
 
 function creatorQueries(meta) {

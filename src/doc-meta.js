@@ -1,4 +1,4 @@
-import { fetchCreatorAvatar } from "./search.js";
+import { asMs, fetchCreatorAvatar } from "./search.js";
 import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
 
 const ui = {
@@ -14,14 +14,8 @@ const ui = {
 const avatarCache = new Map();
 let avatarFetching = "";
 
-function asTime(ts) {
-  const n = Number(ts) || 0;
-  if (!n) return 0;
-  return n > 1e12 ? n : n * 1000;
-}
-
 export function formatPrettyDate(ts) {
-  const ms = asTime(ts);
+  const ms = asMs(ts);
   if (!ms) return "";
   const date = new Date(ms);
   if (Number.isNaN(date.getTime())) return "";

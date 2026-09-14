@@ -34,6 +34,16 @@
     const matched = String(pathname || "").match(DOC_PATH_RE);
     return matched ? { kind: matched[1].toLowerCase(), id: matched[2] } : null;
   }
+  function isOwnDoc(meta) {
+    if (!meta) return false;
+    if (meta.isSelf) return true;
+    const name = String(meta.name || "").trim().toLowerCase();
+    const viewer = String(meta.viewerId || "").trim().toLowerCase();
+    if (name && viewer && name === viewer) return true;
+    const vid = String(meta.creatorVid || "").trim();
+    const selfVid = String(meta.selfVid || "").trim();
+    return Boolean(vid && selfVid && vid === selfVid);
+  }
   function parseDocUrl(url) {
     const raw = String(url || "").trim();
     if (!raw) return null;
@@ -458,26 +468,33 @@
     if (!requestOk(data)) throw new Error(data?.head?.msg || "search failed");
     return takeFiles(unwrapBody(data).files, FETCH_LIMIT);
   }
-  async function fetchMemberCount(docId) {
+  async function postDocMemberMgr(docId, func, pick) {
+    const id = String(docId || "").trim();
+    if (!id) return null;
     const tries = [
       function() {
-        return postJson("/wedoc/doc_member_mgr", { docid: docId, func: 6 });
+        return postJson("/wedoc/doc_member_mgr", { docid: id, func });
       },
       function() {
-        return postJson("/wedoc/doc_member_mgr", { doc_id: docId, func: 6 });
+        return postJson("/wedoc/doc_member_mgr", { doc_id: id, func });
       },
       function() {
-        return postForm("/wedoc/doc_member_mgr", { docid: docId, func: "6" });
+        return postForm("/wedoc/doc_member_mgr", { docid: id, func: String(func) });
       }
     ];
     for (let i = 0; i < tries.length; i += 1) {
       try {
-        const n = readMemberCnt(await tries[i]());
-        if (n) return n;
+        const data = await tries[i]();
+        if (!requestOk(data)) continue;
+        const hit = pick(data);
+        if (hit) return hit;
       } catch {
       }
     }
-    return 0;
+    return null;
+  }
+  async function fetchMemberCount(docId) {
+    return await postDocMemberMgr(docId, 6, readMemberCnt) || 0;
   }
   function memberList(data) {
     const body = unwrapBody(data);
@@ -489,40 +506,21 @@
     return [];
   }
   async function fetchCreatorAvatar(docId, creatorVid, englishName) {
-    const id = String(docId || "").trim();
-    if (!id) return "";
     const vid = String(creatorVid || "").trim();
     const name = String(englishName || "").trim().toLowerCase();
-    const tries = [
-      function() {
-        return postJson("/wedoc/doc_member_mgr", { docid: id, func: 1 });
-      },
-      function() {
-        return postJson("/wedoc/doc_member_mgr", { doc_id: id, func: 1 });
-      },
-      function() {
-        return postForm("/wedoc/doc_member_mgr", { docid: id, func: "1" });
-      }
-    ];
-    for (let i = 0; i < tries.length; i += 1) {
-      try {
-        const data = await tries[i]();
-        if (!requestOk(data)) continue;
-        const list = memberList(data);
-        if (!list.length) continue;
-        const hit = list.find(function(item) {
-          return vid && String(item?.vid || "") === vid;
-        }) || list.find(function(item) {
-          return name && String(item?.english_name || "").toLowerCase() === name;
-        }) || list.find(function(item) {
-          return name && String(item?.name || "").toLowerCase().startsWith(`${name}(`);
-        });
-        const image = String(hit?.image || hit?.avatar || hit?.userPic || "").trim();
-        if (image) return image;
-      } catch {
-      }
-    }
-    return "";
+    const image = await postDocMemberMgr(docId, 1, function(data) {
+      const list = memberList(data);
+      if (!list.length) return "";
+      const hit = list.find(function(item) {
+        return vid && String(item?.vid || "") === vid;
+      }) || list.find(function(item) {
+        return name && String(item?.english_name || "").toLowerCase() === name;
+      }) || list.find(function(item) {
+        return name && String(item?.name || "").toLowerCase().startsWith(`${name}(`);
+      });
+      return String(hit?.image || hit?.avatar || hit?.userPic || "").trim();
+    });
+    return image || "";
   }
   async function getDocMemberCount(docId) {
     const id = String(docId || "").trim();
@@ -547,6 +545,24 @@
     }
     return n;
   }
+  function asInfoList(body) {
+    if (!body || typeof body !== "object") return [];
+    if (Array.isArray(body.doc_infos)) return body.doc_infos;
+    if (Array.isArray(body.infos)) return body.infos;
+    if (Array.isArray(body.list)) return body.list;
+    if (Array.isArray(body.files)) return body.files;
+    if (body.doc_info && typeof body.doc_info === "object") return [body.doc_info];
+    return [];
+  }
+  function applyInfoFields(item, raw) {
+    if (!item || !raw || typeof raw !== "object") return;
+    const created = asMs(raw.create_time || raw.ctime || raw.createTime || raw.created_at);
+    if (created && !item.createdAt) item.createdAt = created;
+    const members = pickMemberCount(raw);
+    if (members && !item.members) item.members = members;
+    const viewing = readViewing(raw);
+    if (viewing && !item.viewing) item.viewing = viewing;
+  }
   async function getDocCreateTime(docId) {
     const id = String(docId || "").trim();
     if (!id) return 0;
@@ -562,6 +578,20 @@
     return asMs(
       info.create_time || info.ctime || info.createTime || info.created_at || body.create_time
     );
+  }
+  async function batchGetDocInfo(docIds) {
+    const ids = [...new Set((docIds || []).map(function(id) {
+      return String(id || "").trim();
+    }).filter(Boolean))];
+    if (!ids.length) return [];
+    let data = null;
+    try {
+      data = await postJson("/wedoc/batch_get_doc_info", { doc_ids: ids });
+    } catch {
+      data = await postForm("/wedoc/batch_get_doc_info", { doc_ids: ids });
+    }
+    if (!requestOk(data)) return [];
+    return asInfoList(unwrapBody(data));
   }
   async function hydrateDocStats(items) {
     const store = await loadStatsStore();
@@ -583,8 +613,27 @@
       return item.id && !item.createdAt;
     });
     if (missingCreate.length) {
-      await Promise.all(
+      const infos = await batchGetDocInfo(
         missingCreate.map(function(item) {
+          return item.id;
+        })
+      ).catch(function() {
+        return [];
+      });
+      const byId = /* @__PURE__ */ new Map();
+      infos.forEach(function(raw) {
+        const id = String(raw?.doc_id || raw?.id || raw?.docid || "").trim();
+        if (id) byId.set(id, raw);
+      });
+      missingCreate.forEach(function(item) {
+        const raw = byId.get(item.id);
+        if (raw) applyInfoFields(item, raw);
+      });
+      const still = missingCreate.filter(function(item) {
+        return !item.createdAt;
+      });
+      await Promise.all(
+        still.map(function(item) {
           return getDocCreateTime(item.id).then(function(ts) {
             if (ts) item.createdAt = ts;
           }).catch(function() {
@@ -1330,13 +1379,8 @@
   };
   var avatarCache = /* @__PURE__ */ new Map();
   var avatarFetching = "";
-  function asTime(ts) {
-    const n = Number(ts) || 0;
-    if (!n) return 0;
-    return n > 1e12 ? n : n * 1e3;
-  }
   function formatPrettyDate(ts) {
-    const ms = asTime(ts);
+    const ms = asMs(ts);
     if (!ms) return "";
     const date = new Date(ms);
     if (Number.isNaN(date.getTime())) return "";
@@ -1778,7 +1822,7 @@
     return host.querySelector(":scope > #zoomable-container") || host.querySelector(":scope > #root-editable") || host.querySelector(":scope > #sc-page-content");
   }
   function blockText(el) {
-    return String(el?.innerText || el?.textContent || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    return String(el?.textContent || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
   }
   function isTitleOnlyLabel(text) {
     return /^(标题|无标题|无标题智能文档|无标题文档|untitled(?:\s+document)?)$/i.test(String(text || "").trim());
@@ -1786,25 +1830,13 @@
   function isPlaceholderBodyText(text) {
     return /^(输入正文|输入文字|输入内容|点击输入|键入文字|\/)$/.test(String(text || "").trim());
   }
-  function asTime2(ts) {
-    const n = Number(ts) || 0;
-    if (!n) return 0;
-    return n > 1e12 ? n : n * 1e3;
-  }
   function isCreatedToday(ts) {
-    const ms = asTime2(ts);
+    const ms = asMs(ts);
     if (!ms) return false;
     const date = new Date(ms);
     if (Number.isNaN(date.getTime())) return false;
     const now = /* @__PURE__ */ new Date();
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
-  }
-  function isViewerCreator(meta) {
-    if (!meta) return false;
-    if (meta.isSelf) return true;
-    const name = String(meta.name || "").trim().toLowerCase();
-    const viewer = String(meta.viewerId || "").trim().toLowerCase();
-    return Boolean(name && viewer && name === viewer);
   }
   function isBlankEditorPage() {
     const kind = parseDocPath(location.pathname)?.kind;
@@ -1812,24 +1844,24 @@
       const editable = document.getElementById("root-editable");
       if (!editable) return true;
       const titleEl = editable.querySelector(".sc-text-input-content, .textInput__pIjhc");
-      let body = 0;
-      editable.querySelectorAll(".sc-block-wrapper").forEach(function(el) {
-        if (titleEl && (el === titleEl || el.contains(titleEl))) return;
+      const blocks = editable.querySelectorAll(".sc-block-wrapper");
+      for (let i = 0; i < blocks.length; i += 1) {
+        const el = blocks[i];
+        if (titleEl && (el === titleEl || el.contains(titleEl))) continue;
         if (/sc-block-(image|video|file|embed|simple_table|table|smartsheet|sheet)/.test(String(el.className))) {
-          body += 1;
-          return;
+          return false;
         }
         const text = blockText(el);
-        if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) body += 1;
-      });
-      return body === 0;
+        if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) return false;
+      }
+      return true;
     }
     return false;
   }
   function shouldHideDocFooter(meta) {
     if (!isBlankEditorPage()) return false;
     if (!meta) return true;
-    if (!isViewerCreator(meta)) return false;
+    if (!isOwnDoc(meta)) return false;
     if (!meta.createdAt) return true;
     return isCreatedToday(meta.createdAt);
   }
@@ -1874,11 +1906,8 @@
     const spacer = document.getElementById(FOOTER_SPACE_ID);
     if (spacer) spacer.setAttribute("data-pending", "1");
   }
-  function currentDocId2() {
-    return parseDocPath(location.pathname)?.id || "";
-  }
   function currentPageKey() {
-    const id = currentDocId2();
+    const id = currentDocId();
     let page = "";
     try {
       page = new URLSearchParams(location.search).get("p") || "";
@@ -2094,7 +2123,7 @@
   function ensureFooter() {
     if (isFooterDismissed()) {
       hideFooter();
-      return heldFooter || document.createElement("div");
+      return null;
     }
     let footer = document.getElementById(FOOTER_ROOT_ID) || heldFooter;
     if (!footer) {
@@ -2252,7 +2281,9 @@
   function paintWanderCol(items, options) {
     if (isFooterDismissed()) return;
     const footer = ensureFooter();
+    if (!footer) return;
     const root = findHeld(WANDER_ROOT_ID);
+    if (!root) return;
     const list = Array.isArray(items) ? items : [];
     const opts = options && typeof options === "object" ? options : {};
     const loading = Boolean(opts.loading);
@@ -3024,13 +3055,6 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     ui4.creatorPool = rankCreator(filterPool(ui4.creatorPool, exclude));
     return exclude;
   }
-  function isOwnDoc(meta) {
-    if (!meta) return false;
-    if (meta.isSelf) return true;
-    const name = String(meta.name || "").trim().toLowerCase();
-    const viewer = String(meta.viewerId || "").trim().toLowerCase();
-    return Boolean(name && viewer && name === viewer);
-  }
   function creatorQueries(meta) {
     const name = String(meta?.name || "").trim();
     const display = String(meta?.displayName || "").trim();
@@ -3273,6 +3297,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   };
   var contentReadyFor = "";
   var lastPageKey = "";
+  var applyRetryTimer = 0;
   function pageContentReady() {
     const id = currentPageKey();
     if (contentReadyFor && contentReadyFor !== id) contentReadyFor = "";
@@ -3287,6 +3312,8 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     if (lastPageKey && lastPageKey !== page) {
       contentReadyFor = "";
       resetFooterGate();
+      window.clearTimeout(applyRetryTimer);
+      applyRetryTimer = 0;
     }
     lastPageKey = page;
     if (isHomePage()) {
@@ -3344,7 +3371,9 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       unmountDocMeta();
     }
     if (isDocDetailPage() && !hideBox && (!document.getElementById(FOOTER_ROOT_ID) || footerPending())) {
-      window.setTimeout(function() {
+      window.clearTimeout(applyRetryTimer);
+      applyRetryTimer = window.setTimeout(function() {
+        applyRetryTimer = 0;
         if (extensionAlive() && !shouldHideDocFooter(last.docMeta) && !isFooterDismissed() && (!document.getElementById(FOOTER_ROOT_ID) || footerPending())) {
           apply();
         }
