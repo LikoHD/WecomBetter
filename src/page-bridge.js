@@ -156,6 +156,7 @@ function hookEditorUpdates() {
   hookedEditor = true;
   listenTarget(editor, ["change", "contentchange", "edit"], schedulePublish);
   listenTarget(editor?.layoutController, ["layout", "update", "change"], schedulePublish);
+  listenTarget(editor?._layoutTypeManager, ["change", "layout", "update"], schedulePublish);
   listenTarget(xEditor, ["change", "dataChange", "transaction"], schedulePublish);
   listenTarget(xEditor?.dataCore, ["update", "change", "transaction"], schedulePublish);
 }
@@ -367,7 +368,9 @@ function collectRefDocs() {
       });
     }
   }
-  return [...bucket.values()];
+  return [...bucket.values()].sort(function (a, b) {
+    return String(a.id).localeCompare(String(b.id));
+  });
 }
 
 function parseLooseTime(value) {
@@ -408,6 +411,49 @@ function currentUserInfo() {
   );
 }
 
+function readPageMar(pageBox) {
+  let node = pageBox;
+  for (let i = 0; i < 6 && node; i += 1) {
+    const bag = node.sectionProperty?.propBag?.pgMar?.propBag;
+    if (bag && bag.top != null) {
+      return {
+        top: Number(bag.top) || 1440,
+        left: Number(bag.left) || 1800,
+      };
+    }
+    node = node.childBoxes && node.childBoxes[0];
+  }
+  return { top: 1440, left: 1800 };
+}
+
+function canvasLayoutType() {
+  const editor = window.pad?.editor;
+  const raw = editor?._layoutTypeManager?.currentLayoutType ?? editor?._docEnv?.layoutType ?? editor?.layoutController?.docEnv?.layoutType;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 2;
+}
+
+function collectCanvasMetaPlace() {
+  const editor = window.pad?.editor;
+  const layoutType = canvasLayoutType();
+  const zoom = Number(editor?._view?.renderer?._zoom) || 1;
+  const page0 = editor?.layoutController?.docBox?.childBoxes?.[0];
+  const mar = readPageMar(page0);
+  function twipPx(value) {
+    return ((Number(value) || 0) / 15) * zoom;
+  }
+  const pageTop = twipPx(mar.top);
+  const pageLeft = twipPx(mar.left);
+  const metaH = 26;
+  const gap = 8;
+  const header = layoutType === 2 ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
+  return {
+    layoutType,
+    metaTop: Math.round(Math.max(gap, header - metaH - gap)),
+    metaLeft: Math.round(pageLeft),
+  };
+}
+
 function collectDocMeta(viewers) {
   const path = parseDocPath(location.pathname);
   if (!path || (path.kind !== "doc" && path.kind !== "smartpage")) return null;
@@ -418,12 +464,17 @@ function collectDocMeta(viewers) {
   const self = currentUserInfo() || {};
   const parsed = parseLabel(file?.creatorName || "");
   const viewerId = String(self.englishName || self.english_name || self.vid || self.userId || "").trim();
+  const creatorVid = String(
+    file?.createrVid || file?.creatorVid || file?.creater_vid || file?.s_creater_vid || ""
+  ).trim();
+  const selfVid = String(self.vid || self.userId || "").trim();
   let name = parsed.id || "";
   let isSelf = Boolean(file?.isSelf || cv.isCreator);
   if (isSelf) {
     name = String(self.englishName || self.english_name || name).trim() || name;
   }
-  if (!isSelf && name && viewerId && name === viewerId) isSelf = true;
+  if (!isSelf && name && viewerId && name.toLowerCase() === viewerId.toLowerCase()) isSelf = true;
+  if (!isSelf && creatorVid && selfVid && creatorVid === selfVid) isSelf = true;
 
   let avatar = "";
   if (isSelf) {
@@ -445,12 +496,22 @@ function collectDocMeta(viewers) {
     createdAt;
 
   const displayName = String(parsed.name || "").trim();
-  const creatorVid = String(
-    file?.createrVid || file?.creatorVid || file?.creater_vid || file?.s_creater_vid || ""
-  ).trim();
+  const place = path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, metaTop: 0, metaLeft: 0 };
 
   if (!name && !createdAt && !updatedAt) return null;
-  return { name, displayName, avatar, createdAt, updatedAt, isSelf, viewerId, creatorVid };
+  return {
+    name,
+    displayName,
+    avatar,
+    createdAt,
+    updatedAt,
+    isSelf,
+    viewerId,
+    creatorVid,
+    layoutType: place.layoutType,
+    metaTop: place.metaTop,
+    metaLeft: place.metaLeft,
+  };
 }
 
 function collectDocTitle() {
@@ -494,7 +555,7 @@ function publish() {
         refs: collectRefDocs(),
         docMeta: collectDocMeta(viewers),
         docTitle: collectDocTitle(),
-        path: location.pathname,
+        path: `${location.pathname}${location.search}`,
       },
     })
   );
@@ -614,14 +675,44 @@ function onCreateMessage(event) {
   onCreateSmartpage();
 }
 
+function hookHistory() {
+  ["pushState", "replaceState"].forEach(function (name) {
+    const raw = history[name];
+    if (typeof raw !== "function" || raw.__wxwb) return;
+    function wrapped() {
+      const ret = raw.apply(this, arguments);
+      schedulePublish();
+      return ret;
+    }
+    wrapped.__wxwb = true;
+    history[name] = wrapped;
+  });
+  window.addEventListener("popstate", schedulePublish);
+}
+
 window.__WECOM_BETTER__ = "1.0.3";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
 window.addEventListener("message", onCreateMessage);
+hookHistory();
 publish();
 window.setTimeout(primeViewersIfNeeded, 800);
 window.setTimeout(primeViewersIfNeeded, 2400);
-new MutationObserver(schedulePublish).observe(document.documentElement, {
+function mutationFromOurUi(mutation) {
+  function ours(node) {
+    if (!node) return true;
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    if (!el || el.nodeType !== 1) return true;
+    return isOurUi(el);
+  }
+  if (!ours(mutation.target)) return false;
+  return [...mutation.addedNodes, ...mutation.removedNodes].every(ours);
+}
+
+new MutationObserver(function (mutations) {
+  if (mutations.every(mutationFromOurUi)) return;
+  schedulePublish();
+}).observe(document.documentElement, {
   childList: true,
   subtree: true,
   characterData: true,

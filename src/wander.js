@@ -540,13 +540,7 @@ export function unmountWander() {
     root.setAttribute("data-empty", "1");
     root.removeAttribute("aria-busy");
   }
-  const footer = document.getElementById(FOOTER_ROOT_ID);
-  const refs = document.getElementById(REFS_ROOT_ID);
-  const refsEmpty = !refs || refs.getAttribute("data-empty") !== "0";
-  if (footer && refsEmpty) {
-    footer.remove();
-    document.getElementById(FOOTER_SPACE_ID)?.remove();
-  } else syncFooterEmpty();
+  syncFooterEmpty();
 }
 
 export function mountWander(opts) {

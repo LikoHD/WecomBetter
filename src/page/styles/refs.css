@@ -1,9 +1,15 @@
+#sc-scroll-container > #wxdoc-doc-footer,
 #wxdoc-doc-footer {
   box-sizing: border-box;
-  display: flex;
-  gap: 40px;
-  margin: 16px 0 0;
-  padding: 8px 20px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  column-gap: 40px;
+  row-gap: 12px;
+  flex: 0 0 auto;
+  position: relative;
+  margin: 0;
+  padding: 8px 36px 12px 20px;
   max-width: 100%;
   border-radius: 8px;
   background: #f5f6f7;
@@ -16,6 +22,11 @@
   pointer-events: auto;
   user-select: none;
   -webkit-user-select: none;
+}
+
+#sc-scroll-container > #wxdoc-doc-footer:has(> #wxdoc-wander-docs[data-empty="1"]),
+#wxdoc-doc-footer:has(> #wxdoc-wander-docs[data-empty="1"]) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 #wxdoc-doc-footer-space {
@@ -36,15 +47,68 @@
   display: none;
 }
 
-#wxdoc-ref-docs,
-#wxdoc-wander-docs {
+#wxdoc-doc-footer > .wxrd-close {
   box-sizing: border-box;
-  flex: 1 1 0;
-  min-width: 0;
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #c0c4cc;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-#wxdoc-doc-footer > [data-empty="1"] {
+#wxdoc-doc-footer > .wxrd-close:hover {
+  color: #8f959e;
+  background: rgba(31, 35, 41, 0.06);
+}
+
+#wxdoc-doc-footer > .wxrd-close:focus-visible {
+  outline: 2px solid rgba(51, 109, 244, 0.45);
+  outline-offset: 1px;
+}
+
+#wxdoc-doc-footer > .wxrd-close .wxrd-close-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+#wxdoc-doc-footer[data-pending="1"],
+#wxdoc-doc-footer-space[data-pending="1"] {
+  visibility: hidden;
+}
+
+#sc-scroll-container > #wxdoc-doc-footer > #wxdoc-ref-docs,
+#sc-scroll-container > #wxdoc-doc-footer > #wxdoc-wander-docs,
+#wxdoc-doc-footer > #wxdoc-ref-docs,
+#wxdoc-doc-footer > #wxdoc-wander-docs {
+  box-sizing: border-box;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+}
+
+#wxdoc-doc-footer > #wxdoc-wander-docs[data-empty="1"] {
   display: none;
+}
+
+#wxdoc-ref-docs .wxrd-empty {
+  padding: 4px 6px;
+  color: rgba(31, 35, 41, 0.45);
+  font-size: 13px;
+  line-height: 22px;
 }
 
 #wxdoc-ref-docs .wxrd-head {

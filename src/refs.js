@@ -16,6 +16,8 @@ const ICONS = {
 
 const REFRESH_ICON =
   '<svg class="wxwd-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.577 5.211a7.8 7.8 0 105.938 2.274l.849-.849a9 9 0 11-7.195-2.598l-1.19-1.19.85-.848 2.474 2.475a.5.5 0 010 .707l-.495.495-1.98 1.98-.848-.849 1.597-1.597z" fill="currentColor" fill-rule="evenodd" fill-opacity=".9"/></svg>';
+const CLOSE_ICON =
+  '<svg class="wxrd-close-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.22 4.22a.75.75 0 011.06 0L8 6.94l2.72-2.72a.75.75 0 111.06 1.06L9.06 8l2.72 2.72a.75.75 0 11-1.06 1.06L8 9.06l-2.72 2.72a.75.75 0 11-1.06-1.06L6.94 8 4.22 5.28a.75.75 0 010-1.06z"/></svg>';
 const PERSON_ICON =
   '<svg class="wxrd-person" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 19.8v-.485c0-.229-.235-.605-.44-.705l-5.66-2.76c-1.527-.745-1.904-2.546-.81-3.843l.36-.428c.552-.654 1.05-2.014 1.05-2.868V7c0-1.545-1.254-2.8-2.8-2.8A2.803 2.803 0 009.2 7v1.71c0 .856.496 2.21 1.05 2.866l.36.429c1.097 1.299.715 3.099-.81 3.843L4.14 18.61c-.203.099-.44.479-.44.705v.485h16.6zM2.5 20v-.685c0-.685.498-1.483 1.114-1.784l5.66-2.762c.821-.4 1.012-1.288.42-1.99l-.362-.429C8.596 11.478 8 9.85 8 8.71V7a4 4 0 018 0v1.71c0 1.14-.6 2.773-1.332 3.642l-.361.428c-.59.699-.406 1.588.419 1.99l5.66 2.762c.615.3 1.114 1.093 1.114 1.783V20a1 1 0 01-1 1h-17a1 1 0 01-1-1z" fill="currentColor" fill-rule="evenodd" fill-opacity=".9"/></svg>';
 
@@ -28,6 +30,16 @@ const refsUi = {
 };
 
 let heldFooter = null;
+const dismissedPages = new Set();
+
+export function isFooterDismissed() {
+  return dismissedPages.has(currentPageKey());
+}
+
+export function dismissFooter() {
+  dismissedPages.add(currentPageKey());
+  hideFooter();
+}
 
 const refStatsMemo = new Map();
 
@@ -53,9 +65,9 @@ function needsRefStats(items) {
 
 function findRefsHost() {
   if (parseDocPath(location.pathname)?.kind === "smartpage") {
-    const editable = document.querySelector("#root-editable");
-    if (editable?.parentElement) return editable.parentElement;
-    return document.querySelector("#sc-page-content") || document.querySelector("#sc-scroll-container");
+    // 滚动容器的直接子级才是整页画布；内层 jumper / #root-editable 是 React 编辑区，
+    // 插进去会落在 min-height 撑开的首屏空白里，正文稍后加载就会整页跳动。
+    return document.querySelector("#sc-scroll-container");
   }
   const zoom = document.querySelector("#zoomable-container");
   if (zoom?.parentElement) return zoom.parentElement;
@@ -64,6 +76,14 @@ function findRefsHost() {
 
 function findCanvas(host) {
   if (!host) return null;
+  if (parseDocPath(location.pathname)?.kind === "smartpage") {
+    const editable = document.getElementById("root-editable");
+    let node = editable;
+    while (node && node.parentElement !== host) node = node.parentElement;
+    if (node && node.parentElement === host) return node;
+    const jumpers = host.querySelectorAll(":scope > .jumper-dom-container");
+    return jumpers[jumpers.length - 1] || null;
+  }
   return (
     host.querySelector(":scope > #zoomable-container") ||
     host.querySelector(":scope > #root-editable") ||
@@ -71,11 +91,84 @@ function findCanvas(host) {
   );
 }
 
+function blockText(el) {
+  return String(el?.innerText || el?.textContent || "")
+    .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isTitleOnlyLabel(text) {
+  return /^(标题|无标题|无标题智能文档|无标题文档|untitled(?:\s+document)?)$/i.test(String(text || "").trim());
+}
+
+function isPlaceholderBodyText(text) {
+  return /^(输入正文|输入文字|输入内容|点击输入|键入文字|\/)$/.test(String(text || "").trim());
+}
+
+function asTime(ts) {
+  const n = Number(ts) || 0;
+  if (!n) return 0;
+  return n > 1e12 ? n : n * 1000;
+}
+
+function isCreatedToday(ts) {
+  const ms = asTime(ts);
+  if (!ms) return false;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function isViewerCreator(meta) {
+  if (!meta) return false;
+  if (meta.isSelf) return true;
+  const name = String(meta.name || "").trim().toLowerCase();
+  const viewer = String(meta.viewerId || "").trim().toLowerCase();
+  return Boolean(name && viewer && name === viewer);
+}
+
+export function isBlankEditorPage() {
+  const kind = parseDocPath(location.pathname)?.kind;
+  if (kind === "smartpage") {
+    const editable = document.getElementById("root-editable");
+    if (!editable) return true;
+    const titleEl = editable.querySelector(".sc-text-input-content, .textInput__pIjhc");
+    let body = 0;
+    editable.querySelectorAll(".sc-block-wrapper").forEach(function (el) {
+      if (titleEl && (el === titleEl || el.contains(titleEl))) return;
+      if (/sc-block-(image|video|file|embed|simple_table|table|smartsheet|sheet)/.test(String(el.className))) {
+        body += 1;
+        return;
+      }
+      const text = blockText(el);
+      if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) body += 1;
+    });
+    return body === 0;
+  }
+  return false;
+}
+
+export function shouldHideDocFooter(meta) {
+  if (!isBlankEditorPage()) return false;
+  if (!meta) return true;
+  if (!isViewerCreator(meta)) return false;
+  if (!meta.createdAt) return true;
+  return isCreatedToday(meta.createdAt);
+}
+
 export function mainContentReady() {
   const kind = parseDocPath(location.pathname)?.kind;
   if (kind === "smartpage") {
+    const scroll = document.querySelector("#sc-scroll-container");
+    const jumper = scroll?.querySelector(":scope > .jumper-dom-container");
     const editable = document.querySelector("#root-editable");
-    if (!editable) return false;
+    if (!scroll || !jumper || !editable) return false;
     return editable.getBoundingClientRect().height >= 80 && editable.childElementCount > 0;
   }
   if (kind === "doc") {
@@ -85,6 +178,138 @@ export function mainContentReady() {
     return zoom.getBoundingClientRect().height >= 80;
   }
   return false;
+}
+
+let unlockFor = "";
+let settleH = 0;
+let settleAt = 0;
+let revealFor = "";
+let lastRefsN = -1;
+let lastRefsAt = 0;
+let lastFootH = -1;
+let lastFootAt = 0;
+
+export function resetFooterGate() {
+  unlockFor = "";
+  settleH = 0;
+  settleAt = 0;
+  revealFor = "";
+  lastRefsN = -1;
+  lastRefsAt = 0;
+  lastFootH = -1;
+  lastFootAt = 0;
+  const footer = document.getElementById(FOOTER_ROOT_ID);
+  if (footer) {
+    footer.style.marginTop = "0px";
+    footer.setAttribute("data-pending", "1");
+  }
+  const spacer = document.getElementById(FOOTER_SPACE_ID);
+  if (spacer) spacer.setAttribute("data-pending", "1");
+}
+
+function currentDocId() {
+  return parseDocPath(location.pathname)?.id || "";
+}
+
+export function currentPageKey() {
+  const id = currentDocId();
+  let page = "";
+  try {
+    page = new URLSearchParams(location.search).get("p") || "";
+  } catch {
+    page = "";
+  }
+  return `${id}:${page}`;
+}
+
+function contentHeightReady() {
+  const scroll = document.querySelector("#sc-scroll-container");
+  const editable = document.getElementById("root-editable");
+  if (!scroll || !editable) return false;
+  const superlist = editable.querySelector(".jumper-dom-superlist");
+  const node = superlist || editable;
+  const height = Math.round(node.getBoundingClientRect().height);
+  if (height < 80) return false;
+  const now = Date.now();
+  if (Math.abs(height - settleH) > 2) {
+    settleH = height;
+    settleAt = now;
+    return false;
+  }
+  return now - settleAt >= 240;
+}
+
+export function footerLayoutReady() {
+  const id = currentPageKey();
+  if (unlockFor && unlockFor !== id) resetFooterGate();
+  if (!mainContentReady()) return false;
+  if (unlockFor === id) return true;
+  const kind = parseDocPath(location.pathname)?.kind;
+  if (kind !== "smartpage") {
+    unlockFor = id;
+    return true;
+  }
+  if (!contentHeightReady()) return false;
+  unlockFor = id;
+  return true;
+}
+
+export function footerPending() {
+  const footer = document.getElementById(FOOTER_ROOT_ID);
+  return Boolean(footer && footer.getAttribute("data-pending") === "1");
+}
+
+function footerRevealReady() {
+  const id = currentPageKey();
+  if (revealFor === id) return true;
+  if (!footerLayoutReady()) return false;
+  const refs = document.getElementById(REFS_ROOT_ID);
+  const wander = document.getElementById(WANDER_ROOT_ID);
+  const footer = document.getElementById(FOOTER_ROOT_ID);
+  if (!footer) return false;
+  const refsN = refs ? refs.querySelectorAll(".wxrd-item").length : 0;
+  const now = Date.now();
+  if (refsN !== lastRefsN) {
+    lastRefsN = refsN;
+    lastRefsAt = now;
+    return false;
+  }
+  if (now - lastRefsAt < 200) return false;
+  const wanderReady = wander && wander.getAttribute("data-empty") === "0";
+  if (!wanderReady && now - lastRefsAt < 800) return false;
+  const height = Math.round(footer.getBoundingClientRect().height);
+  if (height < 24) return false;
+  if (height !== lastFootH) {
+    lastFootH = height;
+    lastFootAt = now;
+    return false;
+  }
+  if (now - lastFootAt < 120) return false;
+  revealFor = id;
+  return true;
+}
+
+function syncPending(footer) {
+  const pending = footerRevealReady() ? "0" : "1";
+  footer.setAttribute("data-pending", pending);
+  const spacer = document.getElementById(FOOTER_SPACE_ID);
+  if (spacer) spacer.setAttribute("data-pending", pending);
+}
+
+const FOOTER_CONTENT_GAP = 100;
+
+function lastMeaningfulBottom(root) {
+  if (!root) return 0;
+  const nodes = root.querySelectorAll(".sc-block-wrapper, table, iframe, embed, object, img, video");
+  let bottom = 0;
+  for (let i = 0; i < nodes.length; i += 1) {
+    const el = nodes[i];
+    if (el.closest(`#${FOOTER_ROOT_ID}`)) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.height < 6 || rect.width < 8) continue;
+    if (rect.bottom > bottom) bottom = rect.bottom;
+  }
+  return bottom;
 }
 
 function alignFooter(footer) {
@@ -97,9 +322,25 @@ function alignFooter(footer) {
   if (!host || !target) return;
   const hostRect = host.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
-  footer.style.width = `${Math.round(targetRect.width)}px`;
-  footer.style.marginLeft = `${Math.max(0, Math.round(targetRect.left - hostRect.left))}px`;
-  footer.style.marginTop = "";
+  if (targetRect.width < 240) return;
+  const width = `${Math.round(targetRect.width)}px`;
+  const marginLeft = `${Math.max(0, Math.round(targetRect.left - hostRect.left))}px`;
+  if (footer.style.width !== width) footer.style.width = width;
+  if (footer.style.marginLeft !== marginLeft) footer.style.marginLeft = marginLeft;
+
+  const canvas = findCanvas(host);
+  const content =
+    (canvas && (canvas.querySelector("#root-editable") || canvas.querySelector("#sc-page-content"))) ||
+    document.getElementById("root-editable") ||
+    document.getElementById("sc-page-content");
+  if (canvas && content && host.contains(canvas)) {
+    const lastBottom = lastMeaningfulBottom(content);
+    const bottom = lastBottom || content.getBoundingClientRect().bottom;
+    const pull = `${Math.round(bottom + FOOTER_CONTENT_GAP - canvas.getBoundingClientRect().bottom)}px`;
+    if (footer.style.marginTop !== pull) footer.style.marginTop = pull;
+  } else if (footer.style.marginTop) {
+    footer.style.marginTop = "0px";
+  }
 }
 
 function ensureSpacer() {
@@ -126,19 +367,14 @@ function isColEmpty(el) {
 export function syncFooterEmpty(footer) {
   const node = footer || findHeld(FOOTER_ROOT_ID);
   if (!node) return;
-  const empty = isColEmpty(findHeld(REFS_ROOT_ID)) && isColEmpty(findHeld(WANDER_ROOT_ID));
-  node.setAttribute("data-empty", empty ? "1" : "0");
+  node.setAttribute("data-empty", "0");
   const spacer = document.getElementById(FOOTER_SPACE_ID);
-  if (spacer) spacer.hidden = empty;
+  if (spacer) spacer.hidden = false;
 }
 
-function footerParked(root, host, canvas, sensor) {
-  if (root.parentElement !== host) return false;
-  const next = root.nextElementSibling;
-  if (canvas) return canvas.nextElementSibling === root;
-  if (next?.id === FOOTER_SPACE_ID) return true;
-  if (sensor) return next === sensor;
-  return next == null;
+function footerParked(root, host, canvas) {
+  if (!host || !canvas || root.parentElement !== host) return false;
+  return canvas.nextElementSibling === root;
 }
 
 export function hideFooter() {
@@ -148,27 +384,32 @@ export function hideFooter() {
 }
 
 export function placeFooter(footer) {
+  if (isFooterDismissed()) {
+    hideFooter();
+    return;
+  }
   const root = footer || document.getElementById(FOOTER_ROOT_ID) || heldFooter;
   if (!root) return;
-  if (!mainContentReady()) {
+  const host = findRefsHost();
+  const canvas = host && findCanvas(host);
+  if (!host || !canvas) {
     root.remove();
     document.getElementById(FOOTER_SPACE_ID)?.remove();
     return;
   }
-  const host = findRefsHost();
-  if (host) {
-    const canvas = findCanvas(host);
-    const sensor = host.querySelector(":scope > .resize-sensor");
-    if (!footerParked(root, host, canvas, sensor)) {
-      if (canvas) host.insertBefore(root, canvas.nextSibling);
-      else if (sensor) host.insertBefore(root, sensor);
-      else host.appendChild(root);
-    }
-  } else if (!document.documentElement.contains(root)) {
-    (document.body || document.documentElement).appendChild(root);
+  if (!footerParked(root, host, canvas)) {
+    host.insertBefore(root, canvas.nextSibling);
   }
   placeSpacer(root);
+  if (!footerLayoutReady()) {
+    root.style.marginTop = "0px";
+    root.setAttribute("data-pending", "1");
+    const spacer = document.getElementById(FOOTER_SPACE_ID);
+    if (spacer) spacer.setAttribute("data-pending", "1");
+    return;
+  }
   alignFooter(root);
+  syncPending(root);
 }
 
 export function placeRefsRoot(root) {
@@ -198,12 +439,34 @@ function ensureCol(id, ariaLabel) {
   return col;
 }
 
+function ensureCloseBtn(footer) {
+  let btn = footer.querySelector(":scope > .wxrd-close");
+  if (btn) return btn;
+  btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "wxrd-close";
+  btn.setAttribute("aria-label", "关闭引用");
+  btn.insertAdjacentHTML("afterbegin", CLOSE_ICON);
+  btn.addEventListener("click", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    dismissFooter();
+  });
+  footer.appendChild(btn);
+  return btn;
+}
+
 export function ensureFooter() {
+  if (isFooterDismissed()) {
+    hideFooter();
+    return heldFooter || document.createElement("div");
+  }
   let footer = document.getElementById(FOOTER_ROOT_ID) || heldFooter;
   if (!footer) {
     footer = document.createElement("div");
     footer.id = FOOTER_ROOT_ID;
     footer.setAttribute("data-empty", "1");
+    footer.setAttribute("data-pending", "1");
   }
   heldFooter = footer;
   const refs = ensureCol(REFS_ROOT_ID, "本文关联文档");
@@ -211,6 +474,7 @@ export function ensureFooter() {
   if (refs.parentElement !== footer) footer.insertBefore(refs, footer.firstChild);
   if (wander.parentElement !== footer) footer.appendChild(wander);
   if (refs.nextElementSibling !== wander) footer.insertBefore(refs, wander);
+  ensureCloseBtn(footer);
   syncFooterEmpty(footer);
   placeFooter(footer);
   return footer;
@@ -281,6 +545,7 @@ function itemSig(item) {
 }
 
 export function renderRefDocs(items) {
+  if (isFooterDismissed()) return;
   const list = Array.isArray(items) ? items : [];
   applyRefStats(list);
   const root = ensureRefsRoot();
@@ -295,12 +560,8 @@ export function renderRefDocs(items) {
 
   refsUi.signature = signature;
   root.replaceChildren();
-  root.setAttribute("data-empty", list.length ? "0" : "1");
+  root.setAttribute("data-empty", "0");
   syncFooterEmpty();
-  if (!list.length) {
-    placeFooter();
-    return;
-  }
 
   const head = document.createElement("div");
   head.className = "wxrd-head";
@@ -309,6 +570,15 @@ export function renderRefDocs(items) {
   title.textContent = `本文关联文档（${list.length}）`;
   head.appendChild(title);
   root.appendChild(head);
+
+  if (!list.length) {
+    const empty = document.createElement("div");
+    empty.className = "wxrd-empty";
+    empty.textContent = "暂无关联文档";
+    root.appendChild(empty);
+    placeFooter();
+    return;
+  }
 
   const listEl = document.createElement("div");
   listEl.className = "wxrd-list";
@@ -364,6 +634,7 @@ function enrichRefStats(items) {
 }
 
 export function paintWanderCol(items, options) {
+  if (isFooterDismissed()) return;
   const footer = ensureFooter();
   const root = findHeld(WANDER_ROOT_ID);
   const list = Array.isArray(items) ? items : [];

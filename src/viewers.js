@@ -69,15 +69,13 @@ function placeViewersRoot(root) {
     root.style.top = "";
     root.style.right = "";
     root.style.zIndex = "";
+    root.style.visibility = "";
     return;
   }
   if (!document.documentElement.contains(root)) {
-    root.style.position = "fixed";
-    root.style.top = "12px";
-    root.style.right = "168px";
-    root.style.zIndex = "2147483000";
     document.documentElement.appendChild(root);
   }
+  root.style.visibility = "hidden";
 }
 
 function ensureRoot() {
@@ -198,7 +196,33 @@ export function renderViewers(viewers, total) {
 
   const root = ensureRoot();
   const signature = `${viewers.map((v) => `${v.id}\n${v.avatar}`).join("|")}#${viewers.length}/${total}`;
-  if (signature === ui.signature && root.childElementCount) return;
+  if (signature === ui.signature && root.childElementCount) {
+    placeViewersRoot(root);
+    return;
+  }
+
+  const samePeople =
+    ui.viewers.length === viewers.length &&
+    ui.viewers.every(function (item, index) {
+      return item && viewers[index] && item.id === viewers[index].id;
+    });
+  if (samePeople && root.childElementCount) {
+    ui.viewers = viewers;
+    ui.signature = signature;
+    const visible = viewers.slice(0, MAX_VISIBLE);
+    const imgs = root.querySelectorAll(".wxov-avatar img");
+    imgs.forEach(function (img, index) {
+      const viewer = visible[visible.length - 1 - index];
+      if (viewer?.avatar && img.getAttribute("src") !== viewer.avatar) img.src = viewer.avatar;
+    });
+    const count = root.querySelector(".wxov-count");
+    if (count) {
+      count.textContent = `${viewers.length}/${total}`;
+      count.setAttribute("aria-label", `在看 ${viewers.length} 人，共 ${total} 人`);
+    }
+    placeViewersRoot(root);
+    return;
+  }
 
   ui.viewers = viewers;
   ui.signature = signature;

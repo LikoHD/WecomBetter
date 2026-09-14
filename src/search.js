@@ -401,6 +401,57 @@ async function fetchMemberCount(docId) {
   return 0;
 }
 
+function memberList(data) {
+  const body = unwrapBody(data);
+  const boxed = body?.member;
+  if (Array.isArray(boxed?.member)) return boxed.member;
+  if (Array.isArray(boxed?.members)) return boxed.members;
+  if (Array.isArray(boxed)) return boxed;
+  if (Array.isArray(body?.members)) return body.members;
+  return [];
+}
+
+export async function fetchCreatorAvatar(docId, creatorVid, englishName) {
+  const id = String(docId || "").trim();
+  if (!id) return "";
+  const vid = String(creatorVid || "").trim();
+  const name = String(englishName || "").trim().toLowerCase();
+  const tries = [
+    function () {
+      return postJson("/wedoc/doc_member_mgr", { docid: id, func: 1 });
+    },
+    function () {
+      return postJson("/wedoc/doc_member_mgr", { doc_id: id, func: 1 });
+    },
+    function () {
+      return postForm("/wedoc/doc_member_mgr", { docid: id, func: "1" });
+    },
+  ];
+  for (let i = 0; i < tries.length; i += 1) {
+    try {
+      const data = await tries[i]();
+      if (!requestOk(data)) continue;
+      const list = memberList(data);
+      if (!list.length) continue;
+      const hit =
+        list.find(function (item) {
+          return vid && String(item?.vid || "") === vid;
+        }) ||
+        list.find(function (item) {
+          return name && String(item?.english_name || "").toLowerCase() === name;
+        }) ||
+        list.find(function (item) {
+          return name && String(item?.name || "").toLowerCase().startsWith(`${name}(`);
+        });
+      const image = String(hit?.image || hit?.avatar || hit?.userPic || "").trim();
+      if (image) return image;
+    } catch {
+      /* 下一组入参 */
+    }
+  }
+  return "";
+}
+
 export async function getDocMemberCount(docId) {
   const id = String(docId || "").trim();
   if (!id) return 0;
@@ -445,6 +496,27 @@ function applyInfoFields(item, raw) {
   if (viewing && !item.viewing) item.viewing = viewing;
 }
 
+export async function getDocCreateTime(docId) {
+  const id = String(docId || "").trim();
+  if (!id) return 0;
+  let data = null;
+  try {
+    data = await postJson("/wedoc/meta_info", { doc_id: id });
+  } catch {
+    data = await postForm("/wedoc/meta_info", { doc_id: id });
+  }
+  if (!requestOk(data)) return 0;
+  const body = unwrapBody(data);
+  const info = body.create_info || body.meta || body.doc_info || body;
+  return asMs(
+    info.create_time ||
+      info.ctime ||
+      info.createTime ||
+      info.created_at ||
+      body.create_time
+  );
+}
+
 export async function batchGetDocInfo(docIds) {
   const ids = [...new Set((docIds || []).map(function (id) {
     return String(id || "").trim();
@@ -481,23 +553,15 @@ export async function enrichDocStats(items) {
     return item.id && !item.createdAt;
   });
   if (missingCreate.length) {
-    try {
-      const infos = await batchGetDocInfo(
-        missingCreate.map(function (item) {
-          return item.id;
-        })
-      );
-      const byId = new Map();
-      infos.forEach(function (raw) {
-        const id = String(raw.doc_id || raw.docid || raw.id || raw.file_id || "").trim();
-        if (id) byId.set(id, raw);
-      });
-      missingCreate.forEach(function (item) {
-        applyInfoFields(item, byId.get(item.id));
-      });
-    } catch {
-      /* 创建时间没有就只画成员数 */
-    }
+    await Promise.all(
+      missingCreate.map(function (item) {
+        return getDocCreateTime(item.id)
+          .then(function (ts) {
+            if (ts) item.createdAt = ts;
+          })
+          .catch(function () {});
+      })
+    );
   }
   await Promise.all(
     list.map(function (item) {

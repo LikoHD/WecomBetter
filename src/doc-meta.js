@@ -1,3 +1,4 @@
+import { fetchCreatorAvatar } from "./search.js";
 import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
 
 const ui = {
@@ -9,6 +10,9 @@ const ui = {
   root: null,
   parts: null,
 };
+
+const avatarCache = new Map();
+let avatarFetching = "";
 
 function asTime(ts) {
   const n = Number(ts) || 0;
@@ -141,7 +145,7 @@ function attachToHtml(root) {
 
 function keepLastPlace(root, mode) {
   if (!root || ui.mode !== mode || !document.documentElement.contains(root)) return false;
-  return mode !== "doc" || root.style.position === "fixed";
+  return mode !== "doc" || root.style.position === "fixed" || root.style.position === "absolute";
 }
 
 function parkPending(root) {
@@ -155,18 +159,64 @@ function markPlaced(root, mode) {
   return true;
 }
 
-function alignDocOverlay(root, title) {
+function findDocTitleAnchor() {
+  const input = document.getElementById("melo-doc-title");
+  if (input && !input.closest("#workbench-titlebar")) {
+    const rect = input.getBoundingClientRect();
+    if (rect.width > 40 && rect.height > 16 && rect.top > 70) return { el: input, mode: "text" };
+  }
+  const page =
+    document.querySelector(".melo-page-container-view.page-0") ||
+    document.querySelector(".melo-page-container-view") ||
+    document.querySelector(".melo-page-main-view");
+  if (page) return { el: page, mode: "canvas" };
+  if (input) return { el: input, mode: "bar" };
+  return null;
+}
+
+function contentFloor() {
+  const content = document.getElementById("workbench-content-container");
+  if (content) return content.getBoundingClientRect().top + 8;
+  const bar = document.getElementById("workbench-titlebar");
+  return (bar?.getBoundingClientRect().bottom || 0) + 8;
+}
+
+function alignDocOverlay(root, anchor) {
+  const title = anchor?.el || anchor;
+  const mode = anchor?.mode || "text";
   const rect = title.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return false;
-  const bar = document.getElementById("workbench-titlebar");
-  const barBottom = bar?.getBoundingClientRect().bottom || rect.bottom;
+  const floor = contentFloor();
+  let left = Math.round(rect.left);
+  let top = Math.round(Math.max(floor, rect.bottom + 8));
+  if (mode === "canvas") {
+    const page = title;
+    const pos = getComputedStyle(page).position;
+    if (pos === "static") page.style.position = "relative";
+    const metaTop = Number(ui.meta?.metaTop);
+    const metaLeft = Number(ui.meta?.metaLeft);
+    const layoutType = Number(ui.meta?.layoutType);
+    root.dataset.mode = "doc";
+    root.dataset.layout = layoutType === 2 ? "web" : layoutType === 3 ? "paged" : "continuous";
+    root.style.position = "absolute";
+    root.style.left = `${metaLeft > 0 ? Math.round(metaLeft) : 64}px`;
+    root.style.top = `${metaTop > 0 ? Math.round(metaTop) : 36}px`;
+    root.style.width = "max-content";
+    root.style.maxWidth = "min(560px, calc(100% - 88px))";
+    root.style.zIndex = "6";
+    if (root.parentElement !== page) page.appendChild(root);
+    return true;
+  }
+  if (mode === "bar") {
+    top = Math.round(Math.max(floor + 152, rect.bottom + 10));
+  }
   root.dataset.mode = "doc";
   root.style.position = "fixed";
-  root.style.left = `${Math.round(rect.left)}px`;
-  root.style.top = `${Math.round(Math.max(rect.bottom, barBottom) + 10)}px`;
+  root.style.left = `${left}px`;
+  root.style.top = `${top}px`;
   root.style.width = "max-content";
-  root.style.maxWidth = `${Math.max(280, Math.round(window.innerWidth - rect.left - 24))}px`;
-  root.style.zIndex = "40";
+  root.style.maxWidth = `${Math.max(280, Math.round(window.innerWidth - left - 24))}px`;
+  root.style.zIndex = "200";
   attachToHtml(root);
   return true;
 }
@@ -196,7 +246,7 @@ export function placeDocMeta(root) {
     return false;
   }
 
-  const title = document.getElementById("melo-doc-title");
+  const title = findDocTitleAnchor();
   if (title && alignDocOverlay(root, title)) return markPlaced(root, "doc");
   if (keepLastPlace(root, "doc")) return true;
   parkPending(root);
@@ -308,7 +358,7 @@ function hasPaint(meta) {
 }
 
 function metaSignature(meta) {
-  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}`;
+  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.metaTop}\t${meta.metaLeft}`;
 }
 
 function mergeMeta(prev, next) {
@@ -319,7 +369,37 @@ function mergeMeta(prev, next) {
     avatar: next.avatar || prev.avatar,
     createdAt: next.createdAt || prev.createdAt,
     updatedAt: next.updatedAt || prev.updatedAt,
+    creatorVid: next.creatorVid || prev.creatorVid,
+    layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
+    metaTop: Number(next.metaTop) > 0 ? next.metaTop : prev.metaTop,
+    metaLeft: Number(next.metaLeft) > 0 ? next.metaLeft : prev.metaLeft,
   };
+}
+
+function ensureCreatorAvatar(meta) {
+  const vid = String(meta?.creatorVid || "").trim();
+  const name = String(meta?.name || "").trim();
+  const key = vid || name;
+  if (!key || meta?.avatar || !ui.docId) return;
+  if (avatarCache.has(key)) {
+    const url = avatarCache.get(key);
+    if (url) renderDocMeta({ avatar: url });
+    return;
+  }
+  if (avatarFetching === key) return;
+  avatarFetching = key;
+  const docId = ui.docId;
+  fetchCreatorAvatar(docId, vid, name)
+    .then(function (url) {
+      avatarCache.set(key, url || "");
+      if (url && ui.docId === docId) renderDocMeta({ avatar: url });
+    })
+    .catch(function () {
+      avatarCache.set(key, "");
+    })
+    .then(function () {
+      if (avatarFetching === key) avatarFetching = "";
+    });
 }
 
 export function unmountDocMeta() {
@@ -363,4 +443,5 @@ export function renderDocMeta(meta) {
     fill(root, next);
   }
   placeDocMeta(root);
+  ensureCreatorAvatar(next);
 }
