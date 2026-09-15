@@ -182,8 +182,6 @@ function snapshotSig(detail) {
     detail.docMeta?.isSelf ? "1" : "0",
     detail.docMeta?.createdAt || "",
     detail.docMeta?.updatedAt || "",
-    detail.docMeta?.layoutType ?? "",
-    detail.docMeta?.isWebLayout ? "1" : "0",
     detail.docTitle || "",
     detail.path || `${location.pathname}${location.search}`,
   ].join("#");

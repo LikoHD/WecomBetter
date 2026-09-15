@@ -470,12 +470,6 @@
       schedulePublish();
     }
   }
-  function collectCanvasLayout() {
-    const editor = window.pad?.editor;
-    const layoutType = canvasLayoutType();
-    const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
-    return { layoutType, isWebLayout: isWeb };
-  }
   function collectDocMeta(viewers) {
     const path = parseDocPath(location.pathname);
     if (!path || path.kind !== "doc" && path.kind !== "smartpage") return null;
@@ -506,7 +500,6 @@
     const createdAt = parseLooseTime(cv.metaCreateTime) || parseLooseTime(cv.createdDate) || parseLooseTime(page?.createdAt) || parseLooseTime(file?.createTime);
     const updatedAt = parseLooseTime(cv.lastModifyTime) || parseLooseTime(page?.updatedAt) || createdAt;
     const displayName = String(parsed.name || "").trim();
-    const place = path.kind === "doc" ? collectCanvasLayout() : { layoutType: 0, isWebLayout: false };
     if (!name && !createdAt && !updatedAt) return null;
     return {
       name,
@@ -516,9 +509,7 @@
       updatedAt,
       isSelf,
       viewerId,
-      creatorVid,
-      layoutType: place.layoutType,
-      isWebLayout: Boolean(place.isWebLayout)
+      creatorVid
     };
   }
   function collectDocTitle() {

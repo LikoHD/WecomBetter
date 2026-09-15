@@ -1,5 +1,5 @@
 import { asMs, fetchCreatorAvatar } from "./search.js";
-import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, WEB_LAYOUT_TYPE, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
+import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
 
 const ui = {
   signature: "",
@@ -172,7 +172,7 @@ function hasDocPages() {
 // 回收，也不裁剪子元素（page-0 自身是 overflow:hidden 且会被复用成 page-2/page-3）。
 function findDocCanvas() {
   const view = document.querySelector(".melo-doc-view");
-  if (!view || view.closest(`#${DOC_META_ROOT_ID}`)) return null;
+  if (!view) return null;
   const rect = view.getBoundingClientRect();
   return rect.width > 40 ? view : null;
 }
@@ -181,32 +181,24 @@ function findDocCanvas() {
 // 不能缓存视口坐标：滚动后视口坐标就过期了，拿它和实时 rect 做差会让元信息漂走。
 // 页边距也不能从 pgMar 推算：Web/页面版式下编辑器渲染的实际留白和模型里的 pgMar 不是
 // 一回事（实测 1417 twip≈94px，渲染却只留 42px），按模型算就会把创建人信息压到标题上。
+// 用首个 .paragraph-drag-cover（第一段的段落框）同时取上边和左边：它就是正文起点，
+// 比「遍历整页取最小 top」省掉几十次强制重排，实测 Web/连页/页面三种版式下两者的
+// top 完全一致（42/94/42），而左边必须用它——遍历会取到更靠左的拖拽把手/快捷菜单。
 function measureFirstPageInset(canvas) {
   const page = document.querySelector(".melo-page-container-view.page-0");
   if (!page || !canvas) return null;
   const pageRect = page.getBoundingClientRect();
-  const canvasRect = canvas.getBoundingClientRect();
   if (pageRect.height <= 0) return null;
-  let top = Infinity;
-  page.querySelectorAll("*").forEach(function (el) {
-    if (el.id === DOC_META_ROOT_ID || el.closest(`#${DOC_META_ROOT_ID}`)) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.height < 6 || rect.width < 12) return;
-    const offsetTop = rect.top - pageRect.top;
-    if (offsetTop >= 0 && offsetTop < top) top = offsetTop;
-  });
-  if (!Number.isFinite(top)) return null;
-  // 左边界对齐正文文字列（.paragraph-drag-cover 是段落自身的宽度），而不是更靠左的
-  // 拖拽把手/快捷菜单容器，否则元信息会比标题突出去一截。
-  let left = 0;
   const para = page.querySelector(".paragraph-drag-cover");
-  if (para) {
-    const paraRect = para.getBoundingClientRect();
-    if (paraRect.width > 12) left = Math.round(paraRect.left - pageRect.left);
-  }
+  if (!para) return null;
+  const paraRect = para.getBoundingClientRect();
+  if (paraRect.height < 6 || paraRect.width < 12) return null;
+  const top = paraRect.top - pageRect.top;
+  if (top < 0) return null;
+  const canvasRect = canvas.getBoundingClientRect();
   return {
     contentTop: Math.round(pageRect.top - canvasRect.top + top),
-    contentLeft: Math.round(pageRect.left - canvasRect.left + left),
+    contentLeft: Math.round(paraRect.left - canvasRect.left),
   };
 }
 
@@ -235,9 +227,6 @@ function alignDocOverlay(root, anchor) {
   const mode = anchor?.mode || "text";
   const rect = title.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return false;
-  const floor = contentFloor();
-  let left = Math.round(rect.left);
-  let top = Math.round(Math.max(floor, rect.bottom + 8));
   if (mode === "canvas") {
     // 挂在 .melo-doc-view（所有分页的稳定父节点）上，用 absolute 落在首页顶部页边距里，
     // 随文档原生滚动、显示在标题上方。不能挂 page-0：那个 DOM 节点会被虚拟化复用成
@@ -245,14 +234,7 @@ function alignDocOverlay(root, anchor) {
     const canvas = title;
     const pos = getComputedStyle(canvas).position;
     if (pos === "static") canvas.style.position = "relative";
-    const layoutType = Number(ui.meta?.layoutType);
     root.dataset.mode = "doc";
-    root.dataset.layout =
-      ui.meta?.isWebLayout || layoutType === WEB_LAYOUT_TYPE
-        ? "web"
-        : layoutType === 3 || layoutType === 4 || layoutType === 5
-          ? "paged"
-          : "continuous";
     root.style.position = "absolute";
     if (root.parentElement !== canvas) canvas.appendChild(root);
     const inset = measureFirstPageInset(canvas) || ui.inset;
@@ -267,6 +249,10 @@ function alignDocOverlay(root, anchor) {
     dropExtraMeta(root);
     return true;
   }
+  // 以下是非画布（浮层）路径才用的定位；画布路径已在上面 return，不必付这几次强制重排。
+  const floor = contentFloor();
+  const left = Math.round(rect.left);
+  let top = Math.round(Math.max(floor, rect.bottom + 8));
   if (mode === "bar") {
     top = Math.round(Math.max(floor + 152, rect.bottom + 10));
   }
@@ -422,7 +408,7 @@ function hasPaint(meta) {
 }
 
 function metaSignature(meta) {
-  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.isWebLayout ? "1" : "0"}`;
+  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}`;
 }
 
 function mergeMeta(prev, next) {
@@ -434,8 +420,6 @@ function mergeMeta(prev, next) {
     createdAt: next.createdAt || prev.createdAt,
     updatedAt: next.updatedAt || prev.updatedAt,
     creatorVid: next.creatorVid || prev.creatorVid,
-    layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
-    isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout,
   };
 }
 

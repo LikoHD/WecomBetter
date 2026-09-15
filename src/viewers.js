@@ -15,58 +15,63 @@ const ui = {
   toastTimer: 0,
   layer: null,
   tipWatch: null,
-  tipSeen: null,
+  tipInner: null,
+  tipNode: null,
 };
 
 // 原生成员卡的文案特征。整个编辑器只有一个 .dui-tooltip-container 复用节点，分享/文档
 // 动态/文档操作/工具栏的 tooltip 都走它，所以不能整体隐藏，只能按内容认人。
+// 注意别改用 toolbar.js 的 data-wecom-better-hide：unmountToolbar 会无条件清掉所有带
+// 那个属性的节点，「快速创建文档」开关一关就会把这里的静音一起抹掉。
 const MEMBER_TIP_RE = /名成员|正在查看/;
 const TIP_CONTAINER = ".dui-tooltip-container";
 const MUTE_ATTR = "data-wxov-mute";
 
 // 成员卡是唯一把文案排成 <p> 两行（「N 名成员」+「xxx 正在查看」）的 tooltip，其它
 // tooltip 都是纯文本、没有 <p>。据此区分，避免把「邀请成员加入」这类正常提示也误伤。
-function isMemberTip(el) {
+// 这里会写 MUTE_ATTR，所以 observer 绝不能监听 attributes，并且写入保持幂等——否则
+// 自己的写入会再次触发自己，变成死循环把渲染进程打满。
+function syncTipMute(el) {
   const lines = el.querySelectorAll("p");
-  if (!lines.length) return false;
-  return [...lines].some(function (line) {
+  const mute = [...lines].some(function (line) {
     return MEMBER_TIP_RE.test(line.textContent || "");
   });
-}
-
-// 复用节点会被换成别的 tooltip，所以每次变动都要重新判断，命中就静音、不命中就放行。
-// 注意：这里会写 MUTE_ATTR，所以 observer 绝不能监听 attributes——否则自己的写入会
-// 再次触发自己，变成死循环把渲染进程打满。
-function syncTipMute(el) {
-  const mute = isMemberTip(el);
-  const had = el.getAttribute(MUTE_ATTR) === "1";
-  if (mute === had) return;
+  if (mute === (el.getAttribute(MUTE_ATTR) === "1")) return;
   if (mute) el.setAttribute(MUTE_ATTR, "1");
   else el.removeAttribute(MUTE_ATTR);
 }
 
-function watchTipContainer(el) {
-  if (!el || ui.tipSeen?.has(el)) return;
-  ui.tipSeen?.add(el);
-  syncTipMute(el);
-  const inner = new MutationObserver(function () {
+// 只跟一个容器：命中新节点时先断开上一个，observer 才能随 unmount 一起干净收掉
+// （否则每个见过的容器都会留下一个永不断开的 observer，且 unmount 后仍会把属性写回来）。
+function bindTipContainer(el) {
+  if (!el || el === ui.tipNode) {
+    if (el) syncTipMute(el);
+    return;
+  }
+  ui.tipInner?.disconnect();
+  ui.tipNode = el;
+  ui.tipInner = new MutationObserver(function () {
     syncTipMute(el);
   });
-  inner.observe(el, { childList: true, subtree: true, characterData: true });
-}
-
-function scanTipContainers() {
-  document.querySelectorAll(TIP_CONTAINER).forEach(watchTipContainer);
+  ui.tipInner.observe(el, { childList: true, subtree: true, characterData: true });
+  syncTipMute(el);
 }
 
 function watchNativeMemberTip() {
-  if (!document.body) return;
-  if (!ui.tipSeen) ui.tipSeen = new WeakSet();
-  // 每轮都扫一遍：容器是按需创建的，可能在 observer 装好之前就已存在。
-  scanTipContainers();
-  if (ui.tipWatch) return;
-  // 容器挂在 body 下按需创建，只盯 body 的直接子节点增减，不做全树监听。
-  ui.tipWatch = new MutationObserver(scanTipContainers);
+  if (ui.tipWatch || !document.body) return;
+  // 容器是按需创建的，装 observer 前可能已经存在，所以先主动找一次（只此一次）。
+  bindTipContainer(document.querySelector(TIP_CONTAINER));
+  // 容器挂在 body 下按需创建，只盯 body 的直接子节点增减，不做全树监听；
+  // 只看新增节点，避免每次 body 变动都全文档扫一遍（编辑器的浮层增删很频繁）。
+  ui.tipWatch = new MutationObserver(function (records) {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        const hit = node.matches(TIP_CONTAINER) ? node : node.querySelector(TIP_CONTAINER);
+        if (hit) bindTipContainer(hit);
+      }
+    }
+  });
   ui.tipWatch.observe(document.body, { childList: true });
 }
 
@@ -79,7 +84,9 @@ export function unmountViewers() {
   ui.layer = null;
   ui.tipWatch?.disconnect();
   ui.tipWatch = null;
-  ui.tipSeen = null;
+  ui.tipInner?.disconnect();
+  ui.tipInner = null;
+  ui.tipNode = null;
   document.querySelectorAll(`${TIP_CONTAINER}[${MUTE_ATTR}]`).forEach(function (el) {
     el.removeAttribute(MUTE_ATTR);
   });

@@ -29,7 +29,6 @@
   var SNAPSHOT_EVENT = "wecom-better:snapshot";
   var HELLO_EVENT = "wecom-better:hello";
   var WEB_LAYOUT_EVENT = "wecom-better:web-layout";
-  var WEB_LAYOUT_TYPE = 8;
   function displayName(viewer) {
     if (viewer.name && viewer.name !== viewer.id) return `${viewer.id}${viewer.name}`;
     return viewer.id;
@@ -1519,7 +1518,7 @@
   }
   function findDocCanvas() {
     const view = document.querySelector(".melo-doc-view");
-    if (!view || view.closest(`#${DOC_META_ROOT_ID}`)) return null;
+    if (!view) return null;
     const rect = view.getBoundingClientRect();
     return rect.width > 40 ? view : null;
   }
@@ -1527,26 +1526,17 @@
     const page = document.querySelector(".melo-page-container-view.page-0");
     if (!page || !canvas) return null;
     const pageRect = page.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
     if (pageRect.height <= 0) return null;
-    let top = Infinity;
-    page.querySelectorAll("*").forEach(function(el) {
-      if (el.id === DOC_META_ROOT_ID || el.closest(`#${DOC_META_ROOT_ID}`)) return;
-      const rect = el.getBoundingClientRect();
-      if (rect.height < 6 || rect.width < 12) return;
-      const offsetTop = rect.top - pageRect.top;
-      if (offsetTop >= 0 && offsetTop < top) top = offsetTop;
-    });
-    if (!Number.isFinite(top)) return null;
-    let left = 0;
     const para = page.querySelector(".paragraph-drag-cover");
-    if (para) {
-      const paraRect = para.getBoundingClientRect();
-      if (paraRect.width > 12) left = Math.round(paraRect.left - pageRect.left);
-    }
+    if (!para) return null;
+    const paraRect = para.getBoundingClientRect();
+    if (paraRect.height < 6 || paraRect.width < 12) return null;
+    const top = paraRect.top - pageRect.top;
+    if (top < 0) return null;
+    const canvasRect = canvas.getBoundingClientRect();
     return {
       contentTop: Math.round(pageRect.top - canvasRect.top + top),
-      contentLeft: Math.round(pageRect.left - canvasRect.left + left)
+      contentLeft: Math.round(paraRect.left - canvasRect.left)
     };
   }
   function findDocTitleAnchor() {
@@ -1572,16 +1562,11 @@
     const mode = anchor?.mode || "text";
     const rect = title.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return false;
-    const floor = contentFloor();
-    let left = Math.round(rect.left);
-    let top = Math.round(Math.max(floor, rect.bottom + 8));
     if (mode === "canvas") {
       const canvas = title;
       const pos = getComputedStyle(canvas).position;
       if (pos === "static") canvas.style.position = "relative";
-      const layoutType = Number(ui2.meta?.layoutType);
       root.dataset.mode = "doc";
-      root.dataset.layout = ui2.meta?.isWebLayout || layoutType === WEB_LAYOUT_TYPE ? "web" : layoutType === 3 || layoutType === 4 || layoutType === 5 ? "paged" : "continuous";
       root.style.position = "absolute";
       if (root.parentElement !== canvas) canvas.appendChild(root);
       const inset = measureFirstPageInset(canvas) || ui2.inset;
@@ -1595,6 +1580,9 @@
       dropExtraMeta(root);
       return true;
     }
+    const floor = contentFloor();
+    const left = Math.round(rect.left);
+    let top = Math.round(Math.max(floor, rect.bottom + 8));
     if (mode === "bar") {
       top = Math.round(Math.max(floor + 152, rect.bottom + 10));
     }
@@ -1731,7 +1719,7 @@
     return Boolean(meta && (meta.name || meta.createdAt || meta.updatedAt));
   }
   function metaSignature(meta) {
-    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}	${meta.layoutType}	${meta.isWebLayout ? "1" : "0"}`;
+    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}`;
   }
   function mergeMeta(prev, next) {
     if (!next || typeof next !== "object") return prev;
@@ -1741,9 +1729,7 @@
       avatar: next.avatar || prev.avatar,
       createdAt: next.createdAt || prev.createdAt,
       updatedAt: next.updatedAt || prev.updatedAt,
-      creatorVid: next.creatorVid || prev.creatorVid,
-      layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
-      isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout
+      creatorVid: next.creatorVid || prev.creatorVid
     };
   }
   function ensureCreatorAvatar(meta) {
@@ -2606,43 +2592,46 @@
     toastTimer: 0,
     layer: null,
     tipWatch: null,
-    tipSeen: null
+    tipInner: null,
+    tipNode: null
   };
   var MEMBER_TIP_RE = /名成员|正在查看/;
   var TIP_CONTAINER = ".dui-tooltip-container";
   var MUTE_ATTR = "data-wxov-mute";
-  function isMemberTip(el) {
+  function syncTipMute(el) {
     const lines = el.querySelectorAll("p");
-    if (!lines.length) return false;
-    return [...lines].some(function(line) {
+    const mute = [...lines].some(function(line) {
       return MEMBER_TIP_RE.test(line.textContent || "");
     });
-  }
-  function syncTipMute(el) {
-    const mute = isMemberTip(el);
-    const had = el.getAttribute(MUTE_ATTR) === "1";
-    if (mute === had) return;
+    if (mute === (el.getAttribute(MUTE_ATTR) === "1")) return;
     if (mute) el.setAttribute(MUTE_ATTR, "1");
     else el.removeAttribute(MUTE_ATTR);
   }
-  function watchTipContainer(el) {
-    if (!el || ui3.tipSeen?.has(el)) return;
-    ui3.tipSeen?.add(el);
-    syncTipMute(el);
-    const inner = new MutationObserver(function() {
+  function bindTipContainer(el) {
+    if (!el || el === ui3.tipNode) {
+      if (el) syncTipMute(el);
+      return;
+    }
+    ui3.tipInner?.disconnect();
+    ui3.tipNode = el;
+    ui3.tipInner = new MutationObserver(function() {
       syncTipMute(el);
     });
-    inner.observe(el, { childList: true, subtree: true, characterData: true });
-  }
-  function scanTipContainers() {
-    document.querySelectorAll(TIP_CONTAINER).forEach(watchTipContainer);
+    ui3.tipInner.observe(el, { childList: true, subtree: true, characterData: true });
+    syncTipMute(el);
   }
   function watchNativeMemberTip() {
-    if (!document.body) return;
-    if (!ui3.tipSeen) ui3.tipSeen = /* @__PURE__ */ new WeakSet();
-    scanTipContainers();
-    if (ui3.tipWatch) return;
-    ui3.tipWatch = new MutationObserver(scanTipContainers);
+    if (ui3.tipWatch || !document.body) return;
+    bindTipContainer(document.querySelector(TIP_CONTAINER));
+    ui3.tipWatch = new MutationObserver(function(records) {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          const hit = node.matches(TIP_CONTAINER) ? node : node.querySelector(TIP_CONTAINER);
+          if (hit) bindTipContainer(hit);
+        }
+      }
+    });
     ui3.tipWatch.observe(document.body, { childList: true });
   }
   function unmountViewers() {
@@ -2654,7 +2643,9 @@
     ui3.layer = null;
     ui3.tipWatch?.disconnect();
     ui3.tipWatch = null;
-    ui3.tipSeen = null;
+    ui3.tipInner?.disconnect();
+    ui3.tipInner = null;
+    ui3.tipNode = null;
     document.querySelectorAll(`${TIP_CONTAINER}[${MUTE_ATTR}]`).forEach(function(el) {
       el.removeAttribute(MUTE_ATTR);
     });
@@ -3505,8 +3496,6 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       detail.docMeta?.isSelf ? "1" : "0",
       detail.docMeta?.createdAt || "",
       detail.docMeta?.updatedAt || "",
-      detail.docMeta?.layoutType ?? "",
-      detail.docMeta?.isWebLayout ? "1" : "0",
       detail.docTitle || "",
       detail.path || `${location.pathname}${location.search}`
     ].join("#");

@@ -475,15 +475,6 @@ function onWebLayoutMessage(event) {
   }
 }
 
-// 只上报版式类型，位置由 isolated 侧按真实渲染结果量（pgMar 和渲染留白不一致，
-// 按模型换算会把创建人信息压到标题上）。
-function collectCanvasLayout() {
-  const editor = window.pad?.editor;
-  const layoutType = canvasLayoutType();
-  const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
-  return { layoutType, isWebLayout: isWeb };
-}
-
 function collectDocMeta(viewers) {
   const path = parseDocPath(location.pathname);
   if (!path || (path.kind !== "doc" && path.kind !== "smartpage")) return null;
@@ -525,7 +516,6 @@ function collectDocMeta(viewers) {
     createdAt;
 
   const displayName = String(parsed.name || "").trim();
-  const place = path.kind === "doc" ? collectCanvasLayout() : { layoutType: 0, isWebLayout: false };
 
   if (!name && !createdAt && !updatedAt) return null;
   return {
@@ -537,8 +527,6 @@ function collectDocMeta(viewers) {
     isSelf,
     viewerId,
     creatorVid,
-    layoutType: place.layoutType,
-    isWebLayout: Boolean(place.isWebLayout),
   };
 }
 
