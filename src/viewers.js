@@ -14,7 +14,61 @@ const ui = {
   tooltipTimer: 0,
   toastTimer: 0,
   layer: null,
+  tipWatch: null,
+  tipSeen: null,
 };
+
+// 原生成员卡的文案特征。整个编辑器只有一个 .dui-tooltip-container 复用节点，分享/文档
+// 动态/文档操作/工具栏的 tooltip 都走它，所以不能整体隐藏，只能按内容认人。
+const MEMBER_TIP_RE = /名成员|正在查看/;
+const TIP_CONTAINER = ".dui-tooltip-container";
+const MUTE_ATTR = "data-wxov-mute";
+
+// 成员卡是唯一把文案排成 <p> 两行（「N 名成员」+「xxx 正在查看」）的 tooltip，其它
+// tooltip 都是纯文本、没有 <p>。据此区分，避免把「邀请成员加入」这类正常提示也误伤。
+function isMemberTip(el) {
+  const lines = el.querySelectorAll("p");
+  if (!lines.length) return false;
+  return [...lines].some(function (line) {
+    return MEMBER_TIP_RE.test(line.textContent || "");
+  });
+}
+
+// 复用节点会被换成别的 tooltip，所以每次变动都要重新判断，命中就静音、不命中就放行。
+// 注意：这里会写 MUTE_ATTR，所以 observer 绝不能监听 attributes——否则自己的写入会
+// 再次触发自己，变成死循环把渲染进程打满。
+function syncTipMute(el) {
+  const mute = isMemberTip(el);
+  const had = el.getAttribute(MUTE_ATTR) === "1";
+  if (mute === had) return;
+  if (mute) el.setAttribute(MUTE_ATTR, "1");
+  else el.removeAttribute(MUTE_ATTR);
+}
+
+function watchTipContainer(el) {
+  if (!el || ui.tipSeen?.has(el)) return;
+  ui.tipSeen?.add(el);
+  syncTipMute(el);
+  const inner = new MutationObserver(function () {
+    syncTipMute(el);
+  });
+  inner.observe(el, { childList: true, subtree: true, characterData: true });
+}
+
+function scanTipContainers() {
+  document.querySelectorAll(TIP_CONTAINER).forEach(watchTipContainer);
+}
+
+function watchNativeMemberTip() {
+  if (!document.body) return;
+  if (!ui.tipSeen) ui.tipSeen = new WeakSet();
+  // 每轮都扫一遍：容器是按需创建的，可能在 observer 装好之前就已存在。
+  scanTipContainers();
+  if (ui.tipWatch) return;
+  // 容器挂在 body 下按需创建，只盯 body 的直接子节点增减，不做全树监听。
+  ui.tipWatch = new MutationObserver(scanTipContainers);
+  ui.tipWatch.observe(document.body, { childList: true });
+}
 
 export function unmountViewers() {
   hideFloat();
@@ -23,6 +77,12 @@ export function unmountViewers() {
   ui.viewers = [];
   ui.signature = "";
   ui.layer = null;
+  ui.tipWatch?.disconnect();
+  ui.tipWatch = null;
+  ui.tipSeen = null;
+  document.querySelectorAll(`${TIP_CONTAINER}[${MUTE_ATTR}]`).forEach(function (el) {
+    el.removeAttribute(MUTE_ATTR);
+  });
   document.documentElement.classList.remove(SILENT_PANEL_CLASS);
 }
 
@@ -194,6 +254,7 @@ function showOverflow(anchor, hidden) {
 export function renderViewers(viewers, total) {
   if (!viewers.length && !total && !ui.viewers.length) return;
 
+  watchNativeMemberTip();
   const root = ensureRoot();
   const signature = `${viewers.map((v) => `${v.id}\n${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   if (signature === ui.signature && root.childElementCount) {

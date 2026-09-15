@@ -187,6 +187,16 @@ html.wxov-silent-panel .ent-collab-panel {
   display: none !important;
 }
 
+/* 原生「N 名成员 / xxx 正在查看」悬浮卡：和我们自己的头像 tip 重叠打架。
+   标记由 viewers.js 按 tooltip 文案打上，只静音成员卡这一种，
+   分享/文档动态/工具栏等共用同一个容器节点的提示照常显示。 */
+.dui-tooltip-container[data-wxov-mute="1"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   #wxdoc-online-viewers .wxov-avatar,
   #wxdoc-online-viewers .wxov-more {

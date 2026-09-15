@@ -9,7 +9,11 @@ const ui = {
   meta: null,
   root: null,
   parts: null,
+  inset: null,
 };
+
+const CANVAS_GAP = 8;
+const META_FALLBACK_H = 26;
 
 const avatarCache = new Map();
 let avatarFetching = "";
@@ -164,17 +168,56 @@ function hasDocPages() {
   return Boolean(document.querySelector(".melo-page-container-view, .melo-page-main-view"));
 }
 
+// 画布文档真正稳定的容器：.melo-doc-view 是所有分页的共同父节点，滚动时不会被虚拟化
+// 回收，也不裁剪子元素（page-0 自身是 overflow:hidden 且会被复用成 page-2/page-3）。
+function findDocCanvas() {
+  const view = document.querySelector(".melo-doc-view");
+  if (!view || view.closest(`#${DOC_META_ROOT_ID}`)) return null;
+  const rect = view.getBoundingClientRect();
+  return rect.width > 40 ? view : null;
+}
+
+// 量出首页正文真正从哪里开始，坐标一律换算成「相对 canvas（.melo-doc-view）」再缓存。
+// 不能缓存视口坐标：滚动后视口坐标就过期了，拿它和实时 rect 做差会让元信息漂走。
+// 页边距也不能从 pgMar 推算：Web/页面版式下编辑器渲染的实际留白和模型里的 pgMar 不是
+// 一回事（实测 1417 twip≈94px，渲染却只留 42px），按模型算就会把创建人信息压到标题上。
+function measureFirstPageInset(canvas) {
+  const page = document.querySelector(".melo-page-container-view.page-0");
+  if (!page || !canvas) return null;
+  const pageRect = page.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+  if (pageRect.height <= 0) return null;
+  let top = Infinity;
+  page.querySelectorAll("*").forEach(function (el) {
+    if (el.id === DOC_META_ROOT_ID || el.closest(`#${DOC_META_ROOT_ID}`)) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.height < 6 || rect.width < 12) return;
+    const offsetTop = rect.top - pageRect.top;
+    if (offsetTop >= 0 && offsetTop < top) top = offsetTop;
+  });
+  if (!Number.isFinite(top)) return null;
+  // 左边界对齐正文文字列（.paragraph-drag-cover 是段落自身的宽度），而不是更靠左的
+  // 拖拽把手/快捷菜单容器，否则元信息会比标题突出去一截。
+  let left = 0;
+  const para = page.querySelector(".paragraph-drag-cover");
+  if (para) {
+    const paraRect = para.getBoundingClientRect();
+    if (paraRect.width > 12) left = Math.round(paraRect.left - pageRect.left);
+  }
+  return {
+    contentTop: Math.round(pageRect.top - canvasRect.top + top),
+    contentLeft: Math.round(pageRect.left - canvasRect.left + left),
+  };
+}
+
 function findDocTitleAnchor() {
   const input = document.getElementById("melo-doc-title");
   if (input && !input.closest("#workbench-titlebar")) {
     const rect = input.getBoundingClientRect();
     if (rect.width > 40 && rect.height > 16 && rect.top > 70) return { el: input, mode: "text" };
   }
-  // 只认真正的首页 page-0（可 append 的容器 div）。分页文档滚动后 page-0 会被虚拟化移出
-  // DOM，绝不能退回「当前 DOM 里的任意第一张页面」——那样会把创建人信息插进文档中部、
-  // 逐页重复出现。page-0 不在时返回 null，交给上层保持上次位置/停放，等它回来再插回去。
-  const page0 = document.querySelector(".melo-page-container-view.page-0");
-  if (page0) return { el: page0, mode: "canvas" };
+  const canvas = findDocCanvas();
+  if (canvas) return { el: canvas, mode: "canvas" };
   if (hasDocPages()) return null;
   if (input) return { el: input, mode: "bar" };
   return null;
@@ -196,14 +239,12 @@ function alignDocOverlay(root, anchor) {
   let left = Math.round(rect.left);
   let top = Math.round(Math.max(floor, rect.bottom + 8));
   if (mode === "canvas") {
-    // 之前的插入方式：把元信息以 absolute 直接放进首页 page-0 的顶部页边距里，随文档原生
-    // 滚动、显示在标题上方（不是浮层，也不覆盖标题）。page-0 是 findDocTitleAnchor 保证过
-    // 的真正首页，插错页/滚动重复的问题在锚点处已挡掉。
-    const page = title;
-    const pos = getComputedStyle(page).position;
-    if (pos === "static") page.style.position = "relative";
-    const metaTop = Number(ui.meta?.metaTop);
-    const metaLeft = Number(ui.meta?.metaLeft);
+    // 挂在 .melo-doc-view（所有分页的稳定父节点）上，用 absolute 落在首页顶部页边距里，
+    // 随文档原生滚动、显示在标题上方。不能挂 page-0：那个 DOM 节点会被虚拟化复用成
+    // page-2/page-3，元信息会跟着跑到文档中部反复出现。
+    const canvas = title;
+    const pos = getComputedStyle(canvas).position;
+    if (pos === "static") canvas.style.position = "relative";
     const layoutType = Number(ui.meta?.layoutType);
     root.dataset.mode = "doc";
     root.dataset.layout =
@@ -213,14 +254,16 @@ function alignDocOverlay(root, anchor) {
           ? "paged"
           : "continuous";
     root.style.position = "absolute";
-    root.style.left = `${metaLeft > 0 ? Math.round(metaLeft) : 64}px`;
-    // metaTop 已是页边距里「标题上方一个身位」的位置，再往上收 12px 留出间距，
-    // 让创建人信息稳定落在标题上方、不和标题重叠；最低不越过页顶。
-    root.style.top = `${Math.max(8, (metaTop > 0 ? Math.round(metaTop) : 36) - 12)}px`;
+    if (root.parentElement !== canvas) canvas.appendChild(root);
+    const inset = measureFirstPageInset(canvas) || ui.inset;
+    if (inset) ui.inset = inset;
+    const height = root.offsetHeight || META_FALLBACK_H;
+    // 正文起点往上一个身位放元信息；页边距不够高时贴顶，宁可紧一点也不压住标题。
+    root.style.top = `${Math.max(CANVAS_GAP, inset ? inset.contentTop - height - CANVAS_GAP : CANVAS_GAP)}px`;
+    root.style.left = `${inset && inset.contentLeft > 0 ? inset.contentLeft : 64}px`;
     root.style.width = "max-content";
     root.style.maxWidth = "min(560px, calc(100% - 88px))";
     root.style.zIndex = "6";
-    if (root.parentElement !== page) page.appendChild(root);
     dropExtraMeta(root);
     return true;
   }
@@ -267,7 +310,7 @@ export function placeDocMeta(root) {
 
   const title = findDocTitleAnchor();
   if (title && alignDocOverlay(root, title)) return markPlaced(root, "doc");
-  // page-0 暂时不在（滚过首页被虚拟化）：保留上次位置或停放，绝不插到其它页面里。
+  // 画布容器还没渲染出来：保留上次位置或停放，等它就位再插回去。
   if (keepLastPlace(root, "doc")) return true;
   parkPending(root);
   return false;
@@ -379,7 +422,7 @@ function hasPaint(meta) {
 }
 
 function metaSignature(meta) {
-  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.isWebLayout ? "1" : "0"}\t${meta.metaTop}\t${meta.metaLeft}`;
+  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.isWebLayout ? "1" : "0"}`;
 }
 
 function mergeMeta(prev, next) {
@@ -393,8 +436,6 @@ function mergeMeta(prev, next) {
     creatorVid: next.creatorVid || prev.creatorVid,
     layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
     isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout,
-    metaTop: Number(next.metaTop) > 0 ? next.metaTop : prev.metaTop,
-    metaLeft: Number(next.metaLeft) > 0 ? next.metaLeft : prev.metaLeft,
   };
 }
 
@@ -433,6 +474,7 @@ export function unmountDocMeta() {
   ui.meta = null;
   ui.root = null;
   ui.parts = null;
+  ui.inset = null;
 }
 
 export function renderDocMeta(meta) {
@@ -447,6 +489,7 @@ export function renderDocMeta(meta) {
     ui.meta = null;
     ui.signature = "";
     ui.mode = "";
+    ui.inset = null;
     if (existing) existing.setAttribute("data-empty", "1");
   }
   ui.docId = docId;

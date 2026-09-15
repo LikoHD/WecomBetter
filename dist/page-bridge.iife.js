@@ -423,20 +423,6 @@
   function currentUserInfo() {
     return window.pad?.clientVars?.userInfo || window.discussionExt?.launcher?.props?.userInfo || null;
   }
-  function readPageMar(pageBox) {
-    let node = pageBox;
-    for (let i = 0; i < 6 && node; i += 1) {
-      const bag = node.sectionProperty?.propBag?.pgMar?.propBag;
-      if (bag && bag.top != null) {
-        return {
-          top: Number(bag.top) || 1440,
-          left: Number(bag.left) || 1800
-        };
-      }
-      node = node.childBoxes && node.childBoxes[0];
-    }
-    return { top: 1440, left: 1800 };
-  }
   function canvasLayoutType() {
     const editor = window.pad?.editor;
     const raw = editor?._layoutTypeManager?.currentLayoutType ?? editor?._docEnv?.layoutType ?? editor?.layoutController?.docEnv?.layoutType;
@@ -484,27 +470,11 @@
       schedulePublish();
     }
   }
-  function collectCanvasMetaPlace() {
+  function collectCanvasLayout() {
     const editor = window.pad?.editor;
     const layoutType = canvasLayoutType();
-    const zoom = Number(editor?._view?.renderer?._zoom) || 1;
-    const page0 = editor?.layoutController?.docBox?.childBoxes?.[0];
-    const mar = readPageMar(page0);
-    function twipPx(value) {
-      return (Number(value) || 0) / 15 * zoom;
-    }
-    const pageTop = twipPx(mar.top);
-    const pageLeft = twipPx(mar.left);
-    const metaH = 26;
-    const gap = 8;
     const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
-    const header = isWeb ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
-    return {
-      layoutType,
-      isWebLayout: isWeb,
-      metaTop: Math.round(Math.max(gap, header - metaH - gap)),
-      metaLeft: Math.round(pageLeft)
-    };
+    return { layoutType, isWebLayout: isWeb };
   }
   function collectDocMeta(viewers) {
     const path = parseDocPath(location.pathname);
@@ -536,7 +506,7 @@
     const createdAt = parseLooseTime(cv.metaCreateTime) || parseLooseTime(cv.createdDate) || parseLooseTime(page?.createdAt) || parseLooseTime(file?.createTime);
     const updatedAt = parseLooseTime(cv.lastModifyTime) || parseLooseTime(page?.updatedAt) || createdAt;
     const displayName = String(parsed.name || "").trim();
-    const place = path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, isWebLayout: false, metaTop: 0, metaLeft: 0 };
+    const place = path.kind === "doc" ? collectCanvasLayout() : { layoutType: 0, isWebLayout: false };
     if (!name && !createdAt && !updatedAt) return null;
     return {
       name,
@@ -548,9 +518,7 @@
       viewerId,
       creatorVid,
       layoutType: place.layoutType,
-      isWebLayout: Boolean(place.isWebLayout),
-      metaTop: place.metaTop,
-      metaLeft: place.metaLeft
+      isWebLayout: Boolean(place.isWebLayout)
     };
   }
   function collectDocTitle() {

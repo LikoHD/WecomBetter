@@ -420,21 +420,6 @@ function currentUserInfo() {
   );
 }
 
-function readPageMar(pageBox) {
-  let node = pageBox;
-  for (let i = 0; i < 6 && node; i += 1) {
-    const bag = node.sectionProperty?.propBag?.pgMar?.propBag;
-    if (bag && bag.top != null) {
-      return {
-        top: Number(bag.top) || 1440,
-        left: Number(bag.left) || 1800,
-      };
-    }
-    node = node.childBoxes && node.childBoxes[0];
-  }
-  return { top: 1440, left: 1800 };
-}
-
 function canvasLayoutType() {
   const editor = window.pad?.editor;
   const raw = editor?._layoutTypeManager?.currentLayoutType ?? editor?._docEnv?.layoutType ?? editor?.layoutController?.docEnv?.layoutType;
@@ -490,27 +475,13 @@ function onWebLayoutMessage(event) {
   }
 }
 
-function collectCanvasMetaPlace() {
+// 只上报版式类型，位置由 isolated 侧按真实渲染结果量（pgMar 和渲染留白不一致，
+// 按模型换算会把创建人信息压到标题上）。
+function collectCanvasLayout() {
   const editor = window.pad?.editor;
   const layoutType = canvasLayoutType();
-  const zoom = Number(editor?._view?.renderer?._zoom) || 1;
-  const page0 = editor?.layoutController?.docBox?.childBoxes?.[0];
-  const mar = readPageMar(page0);
-  function twipPx(value) {
-    return ((Number(value) || 0) / 15) * zoom;
-  }
-  const pageTop = twipPx(mar.top);
-  const pageLeft = twipPx(mar.left);
-  const metaH = 26;
-  const gap = 8;
   const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
-  const header = isWeb ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
-  return {
-    layoutType,
-    isWebLayout: isWeb,
-    metaTop: Math.round(Math.max(gap, header - metaH - gap)),
-    metaLeft: Math.round(pageLeft),
-  };
+  return { layoutType, isWebLayout: isWeb };
 }
 
 function collectDocMeta(viewers) {
@@ -554,8 +525,7 @@ function collectDocMeta(viewers) {
     createdAt;
 
   const displayName = String(parsed.name || "").trim();
-  const place =
-    path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, isWebLayout: false, metaTop: 0, metaLeft: 0 };
+  const place = path.kind === "doc" ? collectCanvasLayout() : { layoutType: 0, isWebLayout: false };
 
   if (!name && !createdAt && !updatedAt) return null;
   return {
@@ -569,8 +539,6 @@ function collectDocMeta(viewers) {
     creatorVid,
     layoutType: place.layoutType,
     isWebLayout: Boolean(place.isWebLayout),
-    metaTop: place.metaTop,
-    metaLeft: place.metaLeft,
   };
 }
 

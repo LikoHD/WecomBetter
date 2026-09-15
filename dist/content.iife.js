@@ -1379,8 +1379,11 @@
     docId: "",
     meta: null,
     root: null,
-    parts: null
+    parts: null,
+    inset: null
   };
+  var CANVAS_GAP = 8;
+  var META_FALLBACK_H = 26;
   var avatarCache = /* @__PURE__ */ new Map();
   var avatarFetching = "";
   function formatPrettyDate(ts) {
@@ -1514,14 +1517,46 @@
   function hasDocPages() {
     return Boolean(document.querySelector(".melo-page-container-view, .melo-page-main-view"));
   }
+  function findDocCanvas() {
+    const view = document.querySelector(".melo-doc-view");
+    if (!view || view.closest(`#${DOC_META_ROOT_ID}`)) return null;
+    const rect = view.getBoundingClientRect();
+    return rect.width > 40 ? view : null;
+  }
+  function measureFirstPageInset(canvas) {
+    const page = document.querySelector(".melo-page-container-view.page-0");
+    if (!page || !canvas) return null;
+    const pageRect = page.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    if (pageRect.height <= 0) return null;
+    let top = Infinity;
+    page.querySelectorAll("*").forEach(function(el) {
+      if (el.id === DOC_META_ROOT_ID || el.closest(`#${DOC_META_ROOT_ID}`)) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.height < 6 || rect.width < 12) return;
+      const offsetTop = rect.top - pageRect.top;
+      if (offsetTop >= 0 && offsetTop < top) top = offsetTop;
+    });
+    if (!Number.isFinite(top)) return null;
+    let left = 0;
+    const para = page.querySelector(".paragraph-drag-cover");
+    if (para) {
+      const paraRect = para.getBoundingClientRect();
+      if (paraRect.width > 12) left = Math.round(paraRect.left - pageRect.left);
+    }
+    return {
+      contentTop: Math.round(pageRect.top - canvasRect.top + top),
+      contentLeft: Math.round(pageRect.left - canvasRect.left + left)
+    };
+  }
   function findDocTitleAnchor() {
     const input = document.getElementById("melo-doc-title");
     if (input && !input.closest("#workbench-titlebar")) {
       const rect = input.getBoundingClientRect();
       if (rect.width > 40 && rect.height > 16 && rect.top > 70) return { el: input, mode: "text" };
     }
-    const page0 = document.querySelector(".melo-page-container-view.page-0");
-    if (page0) return { el: page0, mode: "canvas" };
+    const canvas = findDocCanvas();
+    if (canvas) return { el: canvas, mode: "canvas" };
     if (hasDocPages()) return null;
     if (input) return { el: input, mode: "bar" };
     return null;
@@ -1541,21 +1576,22 @@
     let left = Math.round(rect.left);
     let top = Math.round(Math.max(floor, rect.bottom + 8));
     if (mode === "canvas") {
-      const page = title;
-      const pos = getComputedStyle(page).position;
-      if (pos === "static") page.style.position = "relative";
-      const metaTop = Number(ui2.meta?.metaTop);
-      const metaLeft = Number(ui2.meta?.metaLeft);
+      const canvas = title;
+      const pos = getComputedStyle(canvas).position;
+      if (pos === "static") canvas.style.position = "relative";
       const layoutType = Number(ui2.meta?.layoutType);
       root.dataset.mode = "doc";
       root.dataset.layout = ui2.meta?.isWebLayout || layoutType === WEB_LAYOUT_TYPE ? "web" : layoutType === 3 || layoutType === 4 || layoutType === 5 ? "paged" : "continuous";
       root.style.position = "absolute";
-      root.style.left = `${metaLeft > 0 ? Math.round(metaLeft) : 64}px`;
-      root.style.top = `${Math.max(8, (metaTop > 0 ? Math.round(metaTop) : 36) - 12)}px`;
+      if (root.parentElement !== canvas) canvas.appendChild(root);
+      const inset = measureFirstPageInset(canvas) || ui2.inset;
+      if (inset) ui2.inset = inset;
+      const height = root.offsetHeight || META_FALLBACK_H;
+      root.style.top = `${Math.max(CANVAS_GAP, inset ? inset.contentTop - height - CANVAS_GAP : CANVAS_GAP)}px`;
+      root.style.left = `${inset && inset.contentLeft > 0 ? inset.contentLeft : 64}px`;
       root.style.width = "max-content";
       root.style.maxWidth = "min(560px, calc(100% - 88px))";
       root.style.zIndex = "6";
-      if (root.parentElement !== page) page.appendChild(root);
       dropExtraMeta(root);
       return true;
     }
@@ -1695,7 +1731,7 @@
     return Boolean(meta && (meta.name || meta.createdAt || meta.updatedAt));
   }
   function metaSignature(meta) {
-    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}	${meta.layoutType}	${meta.isWebLayout ? "1" : "0"}	${meta.metaTop}	${meta.metaLeft}`;
+    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}	${meta.layoutType}	${meta.isWebLayout ? "1" : "0"}`;
   }
   function mergeMeta(prev, next) {
     if (!next || typeof next !== "object") return prev;
@@ -1707,9 +1743,7 @@
       updatedAt: next.updatedAt || prev.updatedAt,
       creatorVid: next.creatorVid || prev.creatorVid,
       layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
-      isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout,
-      metaTop: Number(next.metaTop) > 0 ? next.metaTop : prev.metaTop,
-      metaLeft: Number(next.metaLeft) > 0 ? next.metaLeft : prev.metaLeft
+      isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout
     };
   }
   function ensureCreatorAvatar(meta) {
@@ -1743,6 +1777,7 @@
     ui2.meta = null;
     ui2.root = null;
     ui2.parts = null;
+    ui2.inset = null;
   }
   function renderDocMeta(meta) {
     if (!isDocDetailPage()) {
@@ -1755,6 +1790,7 @@
       ui2.meta = null;
       ui2.signature = "";
       ui2.mode = "";
+      ui2.inset = null;
       if (existing) existing.setAttribute("data-empty", "1");
     }
     ui2.docId = docId;
@@ -2568,8 +2604,47 @@
     signature: "",
     tooltipTimer: 0,
     toastTimer: 0,
-    layer: null
+    layer: null,
+    tipWatch: null,
+    tipSeen: null
   };
+  var MEMBER_TIP_RE = /名成员|正在查看/;
+  var TIP_CONTAINER = ".dui-tooltip-container";
+  var MUTE_ATTR = "data-wxov-mute";
+  function isMemberTip(el) {
+    const lines = el.querySelectorAll("p");
+    if (!lines.length) return false;
+    return [...lines].some(function(line) {
+      return MEMBER_TIP_RE.test(line.textContent || "");
+    });
+  }
+  function syncTipMute(el) {
+    const mute = isMemberTip(el);
+    const had = el.getAttribute(MUTE_ATTR) === "1";
+    if (mute === had) return;
+    if (mute) el.setAttribute(MUTE_ATTR, "1");
+    else el.removeAttribute(MUTE_ATTR);
+  }
+  function watchTipContainer(el) {
+    if (!el || ui3.tipSeen?.has(el)) return;
+    ui3.tipSeen?.add(el);
+    syncTipMute(el);
+    const inner = new MutationObserver(function() {
+      syncTipMute(el);
+    });
+    inner.observe(el, { childList: true, subtree: true, characterData: true });
+  }
+  function scanTipContainers() {
+    document.querySelectorAll(TIP_CONTAINER).forEach(watchTipContainer);
+  }
+  function watchNativeMemberTip() {
+    if (!document.body) return;
+    if (!ui3.tipSeen) ui3.tipSeen = /* @__PURE__ */ new WeakSet();
+    scanTipContainers();
+    if (ui3.tipWatch) return;
+    ui3.tipWatch = new MutationObserver(scanTipContainers);
+    ui3.tipWatch.observe(document.body, { childList: true });
+  }
   function unmountViewers() {
     hideFloat();
     document.getElementById(ROOT_ID)?.remove();
@@ -2577,6 +2652,12 @@
     ui3.viewers = [];
     ui3.signature = "";
     ui3.layer = null;
+    ui3.tipWatch?.disconnect();
+    ui3.tipWatch = null;
+    ui3.tipSeen = null;
+    document.querySelectorAll(`${TIP_CONTAINER}[${MUTE_ATTR}]`).forEach(function(el) {
+      el.removeAttribute(MUTE_ATTR);
+    });
     document.documentElement.classList.remove(SILENT_PANEL_CLASS);
   }
   function findHost() {
@@ -2728,6 +2809,7 @@
   }
   function renderViewers(viewers, total) {
     if (!viewers.length && !total && !ui3.viewers.length) return;
+    watchNativeMemberTip();
     const root = ensureRoot3();
     const signature = `${viewers.map((v) => `${v.id}
 ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
@@ -3425,8 +3507,6 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       detail.docMeta?.updatedAt || "",
       detail.docMeta?.layoutType ?? "",
       detail.docMeta?.isWebLayout ? "1" : "0",
-      detail.docMeta?.metaTop ?? "",
-      detail.docMeta?.metaLeft ?? "",
       detail.docTitle || "",
       detail.path || `${location.pathname}${location.search}`
     ].join("#");

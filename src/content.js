@@ -184,8 +184,6 @@ function snapshotSig(detail) {
     detail.docMeta?.updatedAt || "",
     detail.docMeta?.layoutType ?? "",
     detail.docMeta?.isWebLayout ? "1" : "0",
-    detail.docMeta?.metaTop ?? "",
-    detail.docMeta?.metaLeft ?? "",
     detail.docTitle || "",
     detail.path || `${location.pathname}${location.search}`,
   ].join("#");
