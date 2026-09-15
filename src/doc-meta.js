@@ -1,5 +1,5 @@
 import { asMs, fetchCreatorAvatar } from "./search.js";
-import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
+import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, WEB_LAYOUT_TYPE, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
 
 const ui = {
   signature: "",
@@ -131,10 +131,17 @@ function findSmartTitleBlock() {
   return node;
 }
 
+function dropExtraMeta(keep) {
+  document.querySelectorAll(`#${DOC_META_ROOT_ID}`).forEach(function (el) {
+    if (el !== keep) el.remove();
+  });
+}
+
 function attachToHtml(root) {
   if (root.parentElement !== document.documentElement) {
     document.documentElement.appendChild(root);
   }
+  dropExtraMeta(root);
 }
 
 function keepLastPlace(root, mode) {
@@ -153,17 +160,22 @@ function markPlaced(root, mode) {
   return true;
 }
 
+function hasDocPages() {
+  return Boolean(document.querySelector(".melo-page-container-view, .melo-page-main-view"));
+}
+
 function findDocTitleAnchor() {
   const input = document.getElementById("melo-doc-title");
   if (input && !input.closest("#workbench-titlebar")) {
     const rect = input.getBoundingClientRect();
     if (rect.width > 40 && rect.height > 16 && rect.top > 70) return { el: input, mode: "text" };
   }
-  const page =
-    document.querySelector(".melo-page-container-view.page-0") ||
-    document.querySelector(".melo-page-container-view") ||
-    document.querySelector(".melo-page-main-view");
-  if (page) return { el: page, mode: "canvas" };
+  // 只认真正的首页 page-0（可 append 的容器 div）。分页文档滚动后 page-0 会被虚拟化移出
+  // DOM，绝不能退回「当前 DOM 里的任意第一张页面」——那样会把创建人信息插进文档中部、
+  // 逐页重复出现。page-0 不在时返回 null，交给上层保持上次位置/停放，等它回来再插回去。
+  const page0 = document.querySelector(".melo-page-container-view.page-0");
+  if (page0) return { el: page0, mode: "canvas" };
+  if (hasDocPages()) return null;
   if (input) return { el: input, mode: "bar" };
   return null;
 }
@@ -184,6 +196,9 @@ function alignDocOverlay(root, anchor) {
   let left = Math.round(rect.left);
   let top = Math.round(Math.max(floor, rect.bottom + 8));
   if (mode === "canvas") {
+    // 之前的插入方式：把元信息以 absolute 直接放进首页 page-0 的顶部页边距里，随文档原生
+    // 滚动、显示在标题上方（不是浮层，也不覆盖标题）。page-0 是 findDocTitleAnchor 保证过
+    // 的真正首页，插错页/滚动重复的问题在锚点处已挡掉。
     const page = title;
     const pos = getComputedStyle(page).position;
     if (pos === "static") page.style.position = "relative";
@@ -191,14 +206,22 @@ function alignDocOverlay(root, anchor) {
     const metaLeft = Number(ui.meta?.metaLeft);
     const layoutType = Number(ui.meta?.layoutType);
     root.dataset.mode = "doc";
-    root.dataset.layout = layoutType === 2 ? "web" : layoutType === 3 ? "paged" : "continuous";
+    root.dataset.layout =
+      ui.meta?.isWebLayout || layoutType === WEB_LAYOUT_TYPE
+        ? "web"
+        : layoutType === 3 || layoutType === 4 || layoutType === 5
+          ? "paged"
+          : "continuous";
     root.style.position = "absolute";
     root.style.left = `${metaLeft > 0 ? Math.round(metaLeft) : 64}px`;
-    root.style.top = `${metaTop > 0 ? Math.round(metaTop) : 36}px`;
+    // metaTop 已是页边距里「标题上方一个身位」的位置，再往上收 12px 留出间距，
+    // 让创建人信息稳定落在标题上方、不和标题重叠；最低不越过页顶。
+    root.style.top = `${Math.max(8, (metaTop > 0 ? Math.round(metaTop) : 36) - 12)}px`;
     root.style.width = "max-content";
     root.style.maxWidth = "min(560px, calc(100% - 88px))";
     root.style.zIndex = "6";
     if (root.parentElement !== page) page.appendChild(root);
+    dropExtraMeta(root);
     return true;
   }
   if (mode === "bar") {
@@ -216,6 +239,7 @@ function alignDocOverlay(root, anchor) {
 }
 
 function alignSmartpage(root, block) {
+  // 之前的插入方式：作为标题块的后一个兄弟节点插入正文流中，随文档原生滚动，不浮层。
   root.dataset.mode = "smartpage";
   root.style.position = "";
   root.style.left = "";
@@ -224,6 +248,8 @@ function alignSmartpage(root, block) {
   root.style.maxWidth = "";
   root.style.zIndex = "";
   if (block.nextSibling !== root) block.insertAdjacentElement("afterend", root);
+  dropExtraMeta(root);
+  return true;
 }
 
 export function placeDocMeta(root) {
@@ -232,8 +258,7 @@ export function placeDocMeta(root) {
   if (kind === "smartpage") {
     const block = findSmartTitleBlock();
     if (block?.parentElement) {
-      alignSmartpage(root, block);
-      return markPlaced(root, "smartpage");
+      if (alignSmartpage(root, block)) return markPlaced(root, "smartpage");
     }
     if (keepLastPlace(root, "smartpage")) return true;
     parkPending(root);
@@ -242,6 +267,7 @@ export function placeDocMeta(root) {
 
   const title = findDocTitleAnchor();
   if (title && alignDocOverlay(root, title)) return markPlaced(root, "doc");
+  // page-0 暂时不在（滚过首页被虚拟化）：保留上次位置或停放，绝不插到其它页面里。
   if (keepLastPlace(root, "doc")) return true;
   parkPending(root);
   return false;
@@ -259,6 +285,7 @@ function ensureRoot() {
     root.setAttribute("data-empty", "1");
   }
   ui.root = root;
+  dropExtraMeta(root);
   return root;
 }
 
@@ -352,7 +379,7 @@ function hasPaint(meta) {
 }
 
 function metaSignature(meta) {
-  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.metaTop}\t${meta.metaLeft}`;
+  return `${meta.name}\t${meta.avatar}\t${meta.createdAt}\t${meta.updatedAt}\t${meta.layoutType}\t${meta.isWebLayout ? "1" : "0"}\t${meta.metaTop}\t${meta.metaLeft}`;
 }
 
 function mergeMeta(prev, next) {
@@ -365,6 +392,7 @@ function mergeMeta(prev, next) {
     updatedAt: next.updatedAt || prev.updatedAt,
     creatorVid: next.creatorVid || prev.creatorVid,
     layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
+    isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout,
     metaTop: Number(next.metaTop) > 0 ? next.metaTop : prev.metaTop,
     metaLeft: Number(next.metaLeft) > 0 ? next.metaLeft : prev.metaLeft,
   };

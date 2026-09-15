@@ -1,7 +1,6 @@
 (() => {
   // src/shared.js
   var MSG_SOURCE = "wecom-better";
-  var ROOT_ID = "wxdoc-online-viewers";
   var REFS_ROOT_ID = "wxdoc-ref-docs";
   var FOOTER_ROOT_ID = "wxdoc-doc-footer";
   var FOOTER_SPACE_ID = "wxdoc-doc-footer-space";
@@ -11,7 +10,6 @@
   var SEARCH_SETTINGS_ID = "wxdoc-quick-search-settings";
   var CREATE_PLUS_ID = "wxdoc-create-plus";
   var DOC_META_ROOT_ID = "wxdoc-doc-meta";
-  var FLOAT_LAYER_ID = "wxov-float-layer";
   var SILENT_PANEL_CLASS = "wxov-silent-panel";
   var POLL_MS = 1200;
   var DOC_HOST = "doc.weixin.qq.com";
@@ -20,6 +18,8 @@
   var HELLO_EVENT = "wecom-better:hello";
   var CREATE_SMARTPAGE_EVENT = "wecom-better:create-smartpage";
   var CREATE_SMARTPAGE_MSG = "create-smartpage";
+  var WEB_LAYOUT_EVENT = "wecom-better:web-layout";
+  var WEB_LAYOUT_TYPE = 8;
   function parseLabel(text) {
     const raw = String(text || "").replace(/\s+/g, " ").trim();
     if (!raw) return { id: "", name: "" };
@@ -90,6 +90,11 @@
   var seenDomRefs = false;
   var seenDomRefsFor = "";
   var creatingSmartpage = false;
+  var webLayoutEnabled = true;
+  var webLayoutDocId = "";
+  var webLayoutUntil = 0;
+  var WEB_LAYOUT_WINDOW_MS = 8e3;
+  var WEB_LAYOUT_SETTLE_MS = 2e3;
   function usersOrNull(value) {
     const mapped = usersFrom(value);
     return mapped.length ? mapped : null;
@@ -195,106 +200,6 @@
     listenTarget(editor?._layoutTypeManager, ["change", "layout", "update"], schedulePublish);
     listenTarget(xEditor, ["change", "dataChange", "transaction"], schedulePublish);
     listenTarget(xEditor?.dataCore, ["update", "change", "transaction"], schedulePublish);
-  }
-  var MEMBER_OPEN_CLASS = "wxov-member-open";
-  var memberTipArmed = false;
-  function markHiddenTip(el) {
-    if (!el || el.getAttribute("data-wxov-native-tip") === "1") return;
-    el.setAttribute("data-wxov-native-tip", "1");
-    el.style.setProperty("display", "none", "important");
-    el.style.setProperty("visibility", "hidden", "important");
-    el.style.setProperty("pointer-events", "none", "important");
-  }
-  function looksLikeMemberTipCard(el) {
-    if (!(el instanceof Element)) return false;
-    if (el.closest(`#${ROOT_ID}, #${FLOAT_LAYER_ID}`)) return false;
-    if (el.closest(".ent-collab-panel, .collab-list")) return false;
-    const text = String(el.textContent || "").replace(/\s+/g, "");
-    if (!/名成员/.test(text) || !/正在查看/.test(text)) return false;
-    if (text.length > 280) return false;
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 560 || rect.height > 280) return false;
-    return true;
-  }
-  function hideNativeMemberTips() {
-    const nodes = document.querySelectorAll(
-      '[role="tooltip"], [class*="tooltip"], [class*="Tooltip"], [class*="popover"], [class*="popup"], [class*="overlay"], [class*="float"]'
-    );
-    for (let i = 0; i < nodes.length; i += 1) {
-      if (looksLikeMemberTipCard(nodes[i])) markHiddenTip(nodes[i]);
-    }
-    if (!document.body) return;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode();
-    while (node) {
-      const value = node.nodeValue || "";
-      if (value.includes("\u540D\u6210\u5458") || value.includes("\u6B63\u5728\u67E5\u770B")) {
-        let el = node.parentElement;
-        for (let depth = 0; el && depth < 6; depth += 1) {
-          if (looksLikeMemberTipCard(el)) {
-            markHiddenTip(el);
-            break;
-          }
-          el = el.parentElement;
-        }
-      }
-      node = walker.nextNode();
-    }
-  }
-  function mutationHasMemberTip(mutations) {
-    for (let i = 0; i < mutations.length; i += 1) {
-      const added = mutations[i].addedNodes;
-      for (let j = 0; j < added.length; j += 1) {
-        const node = added[j];
-        const text = node.nodeType === 1 ? node.textContent : node.nodeValue;
-        if (text && (text.includes("\u540D\u6210\u5458") || text.includes("\u6B63\u5728\u67E5\u770B"))) return true;
-      }
-    }
-    return false;
-  }
-  function overMemberChrome(el) {
-    return Boolean(
-      el && el.closest && el.closest(`#${ROOT_ID}, #headerbar-member, .ent-collab-users, .member-wrapper`)
-    );
-  }
-  function bindNativeMemberTipMute() {
-    if (bindNativeMemberTipMute.done) return;
-    bindNativeMemberTipMute.done = true;
-    document.addEventListener(
-      "mouseover",
-      function(event) {
-        const target = event.target;
-        if (!(target instanceof Element) || !overMemberChrome(target)) return;
-        memberTipArmed = true;
-        hideNativeMemberTips();
-      },
-      true
-    );
-    document.addEventListener(
-      "mouseout",
-      function(event) {
-        const next = event.relatedTarget;
-        if (next instanceof Element && overMemberChrome(next)) return;
-        memberTipArmed = false;
-      },
-      true
-    );
-    document.addEventListener(
-      "click",
-      function(event) {
-        const target = event.target;
-        if (!(target instanceof Element)) return;
-        if (document.documentElement.classList.contains(SILENT_PANEL_CLASS)) return;
-        if (target.closest(".ent-collab-users") && !target.closest(`#${ROOT_ID}`)) {
-          document.documentElement.classList.add(MEMBER_OPEN_CLASS);
-          return;
-        }
-        if (!target.closest(".ent-collab-panel, .member-wrapper, .collab-list")) {
-          document.documentElement.classList.remove(MEMBER_OPEN_CLASS);
-        }
-      },
-      true
-    );
   }
   function revealNativePanel() {
     document.documentElement.classList.remove(SILENT_PANEL_CLASS);
@@ -538,6 +443,47 @@
     const n = Number(raw);
     return Number.isFinite(n) ? n : 2;
   }
+  function isWebLayoutNow() {
+    const env = window.pad?.editor?.layoutController?.env;
+    if (env && typeof env.isWebLayout === "boolean") return Boolean(env.isWebLayout);
+    return canvasLayoutType() === WEB_LAYOUT_TYPE;
+  }
+  function clickWebLayoutMenu() {
+    const item = findByExactText("Web\u7248\u5F0F", { allowHidden: true });
+    return item ? clickNative(item) : false;
+  }
+  function applyWebLayoutIfNeeded() {
+    if (!webLayoutEnabled) return;
+    const path = parseDocPath(location.pathname);
+    if (!path || path.kind !== "doc") return;
+    if (webLayoutDocId !== path.id) {
+      webLayoutDocId = path.id;
+      webLayoutUntil = Date.now() + WEB_LAYOUT_WINDOW_MS;
+    }
+    if (!webLayoutUntil || Date.now() > webLayoutUntil) return;
+    if (isWebLayoutNow()) {
+      webLayoutUntil = Math.min(webLayoutUntil, Date.now() + WEB_LAYOUT_SETTLE_MS);
+      return;
+    }
+    const ltm = window.pad?.editor?._layoutTypeManager;
+    if (!ltm || typeof ltm.switchTo !== "function") return;
+    try {
+      if (Number(ltm.currentLayoutType) !== WEB_LAYOUT_TYPE) ltm.switchTo(WEB_LAYOUT_TYPE);
+    } catch {
+    }
+    if (!isWebLayoutNow()) clickWebLayoutMenu();
+  }
+  function onWebLayoutMessage(event) {
+    const detail = event.detail;
+    if (!detail || detail.source !== MSG_SOURCE) return;
+    const next = Boolean(detail.enabled);
+    if (next === webLayoutEnabled) return;
+    webLayoutEnabled = next;
+    if (webLayoutEnabled) {
+      webLayoutDocId = "";
+      schedulePublish();
+    }
+  }
   function collectCanvasMetaPlace() {
     const editor = window.pad?.editor;
     const layoutType = canvasLayoutType();
@@ -551,9 +497,11 @@
     const pageLeft = twipPx(mar.left);
     const metaH = 26;
     const gap = 8;
-    const header = layoutType === 2 ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
+    const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
+    const header = isWeb ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
     return {
       layoutType,
+      isWebLayout: isWeb,
       metaTop: Math.round(Math.max(gap, header - metaH - gap)),
       metaLeft: Math.round(pageLeft)
     };
@@ -588,7 +536,7 @@
     const createdAt = parseLooseTime(cv.metaCreateTime) || parseLooseTime(cv.createdDate) || parseLooseTime(page?.createdAt) || parseLooseTime(file?.createTime);
     const updatedAt = parseLooseTime(cv.lastModifyTime) || parseLooseTime(page?.updatedAt) || createdAt;
     const displayName = String(parsed.name || "").trim();
-    const place = path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, metaTop: 0, metaLeft: 0 };
+    const place = path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, isWebLayout: false, metaTop: 0, metaLeft: 0 };
     if (!name && !createdAt && !updatedAt) return null;
     return {
       name,
@@ -600,6 +548,7 @@
       viewerId,
       creatorVid,
       layoutType: place.layoutType,
+      isWebLayout: Boolean(place.isWebLayout),
       metaTop: place.metaTop,
       metaLeft: place.metaLeft
     };
@@ -618,6 +567,7 @@
   function publish() {
     hookRuntimeUpdates();
     hookEditorUpdates();
+    applyWebLayoutIfNeeded();
     const viewers = collectViewers() || [];
     const total = collectTotalCount(viewers.length);
     if (viewers.length) primed = true;
@@ -750,9 +700,9 @@
   window.__WECOM_BETTER__ = "1.0.3";
   document.addEventListener(HELLO_EVENT, publish);
   document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
+  document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
   window.addEventListener("message", onCreateMessage);
   hookHistory();
-  bindNativeMemberTipMute();
   publish();
   window.setTimeout(primeViewersIfNeeded, 800);
   window.setTimeout(primeViewersIfNeeded, 2400);
@@ -767,7 +717,6 @@
     return [...mutation.addedNodes, ...mutation.removedNodes].every(ours);
   }
   new MutationObserver(function(mutations) {
-    if (memberTipArmed || mutationHasMemberTip(mutations)) hideNativeMemberTips();
     if (mutations.every(mutationFromOurUi)) return;
     schedulePublish();
   }).observe(document.documentElement, {

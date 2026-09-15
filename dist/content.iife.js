@@ -22,10 +22,14 @@
     viewers: true,
     refs: true,
     search: true,
-    docMeta: true
+    docMeta: true,
+    webLayout: true,
+    create: true
   };
   var SNAPSHOT_EVENT = "wecom-better:snapshot";
   var HELLO_EVENT = "wecom-better:hello";
+  var WEB_LAYOUT_EVENT = "wecom-better:web-layout";
+  var WEB_LAYOUT_TYPE = 8;
   function displayName(viewer) {
     if (viewer.name && viewer.name !== viewer.id) return `${viewer.id}${viewer.name}`;
     return viewer.id;
@@ -1483,10 +1487,16 @@
     }
     return node;
   }
+  function dropExtraMeta(keep) {
+    document.querySelectorAll(`#${DOC_META_ROOT_ID}`).forEach(function(el) {
+      if (el !== keep) el.remove();
+    });
+  }
   function attachToHtml(root) {
     if (root.parentElement !== document.documentElement) {
       document.documentElement.appendChild(root);
     }
+    dropExtraMeta(root);
   }
   function keepLastPlace(root, mode) {
     if (!root || ui2.mode !== mode || !document.documentElement.contains(root)) return false;
@@ -1501,14 +1511,18 @@
     ui2.mode = mode;
     return true;
   }
+  function hasDocPages() {
+    return Boolean(document.querySelector(".melo-page-container-view, .melo-page-main-view"));
+  }
   function findDocTitleAnchor() {
     const input = document.getElementById("melo-doc-title");
     if (input && !input.closest("#workbench-titlebar")) {
       const rect = input.getBoundingClientRect();
       if (rect.width > 40 && rect.height > 16 && rect.top > 70) return { el: input, mode: "text" };
     }
-    const page = document.querySelector(".melo-page-container-view.page-0") || document.querySelector(".melo-page-container-view") || document.querySelector(".melo-page-main-view");
-    if (page) return { el: page, mode: "canvas" };
+    const page0 = document.querySelector(".melo-page-container-view.page-0");
+    if (page0) return { el: page0, mode: "canvas" };
+    if (hasDocPages()) return null;
     if (input) return { el: input, mode: "bar" };
     return null;
   }
@@ -1534,14 +1548,15 @@
       const metaLeft = Number(ui2.meta?.metaLeft);
       const layoutType = Number(ui2.meta?.layoutType);
       root.dataset.mode = "doc";
-      root.dataset.layout = layoutType === 2 ? "web" : layoutType === 3 ? "paged" : "continuous";
+      root.dataset.layout = ui2.meta?.isWebLayout || layoutType === WEB_LAYOUT_TYPE ? "web" : layoutType === 3 || layoutType === 4 || layoutType === 5 ? "paged" : "continuous";
       root.style.position = "absolute";
       root.style.left = `${metaLeft > 0 ? Math.round(metaLeft) : 64}px`;
-      root.style.top = `${metaTop > 0 ? Math.round(metaTop) : 36}px`;
+      root.style.top = `${Math.max(8, (metaTop > 0 ? Math.round(metaTop) : 36) - 12)}px`;
       root.style.width = "max-content";
       root.style.maxWidth = "min(560px, calc(100% - 88px))";
       root.style.zIndex = "6";
       if (root.parentElement !== page) page.appendChild(root);
+      dropExtraMeta(root);
       return true;
     }
     if (mode === "bar") {
@@ -1566,6 +1581,8 @@
     root.style.maxWidth = "";
     root.style.zIndex = "";
     if (block.nextSibling !== root) block.insertAdjacentElement("afterend", root);
+    dropExtraMeta(root);
+    return true;
   }
   function placeDocMeta(root) {
     if (!root) return false;
@@ -1573,8 +1590,7 @@
     if (kind === "smartpage") {
       const block = findSmartTitleBlock();
       if (block?.parentElement) {
-        alignSmartpage(root, block);
-        return markPlaced(root, "smartpage");
+        if (alignSmartpage(root, block)) return markPlaced(root, "smartpage");
       }
       if (keepLastPlace(root, "smartpage")) return true;
       parkPending(root);
@@ -1597,6 +1613,7 @@
       root.setAttribute("data-empty", "1");
     }
     ui2.root = root;
+    dropExtraMeta(root);
     return root;
   }
   function makeSep(extraClass) {
@@ -1678,7 +1695,7 @@
     return Boolean(meta && (meta.name || meta.createdAt || meta.updatedAt));
   }
   function metaSignature(meta) {
-    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}	${meta.layoutType}	${meta.metaTop}	${meta.metaLeft}`;
+    return `${meta.name}	${meta.avatar}	${meta.createdAt}	${meta.updatedAt}	${meta.layoutType}	${meta.isWebLayout ? "1" : "0"}	${meta.metaTop}	${meta.metaLeft}`;
   }
   function mergeMeta(prev, next) {
     if (!next || typeof next !== "object") return prev;
@@ -1690,6 +1707,7 @@
       updatedAt: next.updatedAt || prev.updatedAt,
       creatorVid: next.creatorVid || prev.creatorVid,
       layoutType: next.layoutType != null ? next.layoutType : prev.layoutType,
+      isWebLayout: next.isWebLayout != null ? next.isWebLayout : prev.isWebLayout,
       metaTop: Number(next.metaTop) > 0 ? next.metaTop : prev.metaTop,
       metaLeft: Number(next.metaLeft) > 0 ? next.metaLeft : prev.metaLeft
     };
@@ -3059,12 +3077,9 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     const name = String(meta?.name || "").trim();
     const display = String(meta?.displayName || "").trim();
     const vid = String(meta?.creatorVid || "").trim();
-    const viewer = String(meta?.viewerId || "").trim();
     const queries = [];
     if (display) queries.push(display);
     if (name && name !== display) queries.push(name);
-    if (viewer && viewer !== name && viewer !== display) queries.push(viewer);
-    if (!queries.length && vid) queries.push(vid);
     return { queries, vid };
   }
   function creatorMatches(file, meta) {
@@ -3124,11 +3139,14 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     const { queries, vid } = creatorQueries(meta);
     if (!queries.length && !vid) return [];
     let files = [];
+    if (vid) {
+      files = await safeSearch("", 7, { and_creater: [vid] });
+      if (!files.length && queries[0]) {
+        files = await safeSearch(queries[0], 7, { and_creater: [vid] });
+      }
+    }
     for (let i = 0; i < queries.length && !files.length; i += 1) {
       files = await safeSearch(queries[i], 7);
-    }
-    if (!files.length && vid) {
-      files = await safeSearch(queries[0] || "", 7, { and_creater: [vid] });
     }
     if (!files.length && queries[0]) files = await safeSearch(queries[0], 5);
     return files.filter(function(file) {
@@ -3196,7 +3214,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     try {
       const keywords = pickKeywords(title);
       const exclude = buildExclude(ui4.refs);
-      const wantCreator = Boolean(meta && (meta.name || meta.displayName || meta.creatorVid || meta.viewerId));
+      const wantCreator = Boolean(meta && (meta.creatorVid || meta.name || meta.displayName));
       const parts = await Promise.all([
         keywords.length ? searchByKeywords(keywords) : Promise.resolve([]),
         wantCreator ? searchCreatorDocs(meta) : Promise.resolve([])
@@ -3298,6 +3316,18 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   var contentReadyFor = "";
   var lastPageKey = "";
   var applyRetryTimer = 0;
+  var lastWebLayoutSent = null;
+  function syncWebLayout() {
+    const enabled = features.webLayout !== false;
+    if (enabled === lastWebLayoutSent) return;
+    lastWebLayoutSent = enabled;
+    document.dispatchEvent(
+      new CustomEvent(WEB_LAYOUT_EVENT, {
+        bubbles: true,
+        detail: { source: MSG_SOURCE, enabled }
+      })
+    );
+  }
   function pageContentReady() {
     const id = currentPageKey();
     if (contentReadyFor && contentReadyFor !== id) contentReadyFor = "";
@@ -3326,7 +3356,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       else unmountSearch();
       return;
     }
-    if (isRefDocsPage()) {
+    if (features.create !== false && isRefDocsPage()) {
       renderToolbar();
     } else {
       unmountToolbar();
@@ -3394,6 +3424,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       detail.docMeta?.createdAt || "",
       detail.docMeta?.updatedAt || "",
       detail.docMeta?.layoutType ?? "",
+      detail.docMeta?.isWebLayout ? "1" : "0",
       detail.docMeta?.metaTop ?? "",
       detail.docMeta?.metaLeft ?? "",
       detail.docTitle || "",
@@ -3404,6 +3435,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   function onSnapshot(event) {
     const detail = event.detail;
     if (!detail || detail.source !== MSG_SOURCE) return;
+    syncWebLayout();
     const next = {
       viewers: Array.isArray(detail.viewers) ? detail.viewers : [],
       total: Number(detail.total) || 0,
@@ -3487,6 +3519,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
       chrome.storage.onChanged.addListener(async function(changes, area) {
         if (!extensionAlive() || area !== "sync" || !changes.features) return;
         features = await readFeatures();
+        syncWebLayout();
         apply();
       });
     } catch {

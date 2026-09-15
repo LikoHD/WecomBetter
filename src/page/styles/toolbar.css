@@ -1,7 +1,3 @@
-#workbench-titlebar:not(:has(#wxdoc-titlebar-tools)) #headerbar-member {
-  margin-left: calc(482px + 80px);
-}
-
 #wxdoc-titlebar-tools {
   box-sizing: border-box;
   display: inline-flex;
@@ -18,7 +14,17 @@
   z-index: 3;
 }
 
-#workbench-titlebar > #wxdoc-quick-search:not(.is-home),
+/* 加号关掉后，搜索会从工具容器里拆出来，直接挂在顶栏。
+   必须自己占住宽度；以前靠给 #headerbar-member 加 562px 左边距占位，
+   搜索已经在文档流里时再加这段边距，会把分享/头像挤出屏幕。 */
+#workbench-titlebar > #wxdoc-quick-search:not(.is-home) {
+  align-self: flex-start;
+  flex: 0 1 450px;
+  width: 450px;
+  max-width: 450px;
+  margin: 12px 80px 0 0;
+}
+
 #workbench-titlebar > #wxdoc-create-plus {
   align-self: flex-start;
   margin-top: 12px;

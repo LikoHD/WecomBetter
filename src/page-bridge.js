@@ -7,20 +7,20 @@ import {
   CREATE_SMARTPAGE_EVENT,
   CREATE_SMARTPAGE_MSG,
   DOC_META_ROOT_ID,
-  FLOAT_LAYER_ID,
   FOOTER_ROOT_ID,
   FOOTER_SPACE_ID,
   HELLO_EVENT,
   MSG_SOURCE,
   POLL_MS,
   REFS_ROOT_ID,
-  ROOT_ID,
   SEARCH_PANEL_ID,
   SEARCH_SETTINGS_ID,
   SEARCH_ROOT_ID,
   SILENT_PANEL_CLASS,
   SNAPSHOT_EVENT,
   WANDER_ROOT_ID,
+  WEB_LAYOUT_EVENT,
+  WEB_LAYOUT_TYPE,
   asUserList,
   findVisibleCollabButton,
   isOwnDoc,
@@ -37,6 +37,12 @@ let hookedEditor = false;
 let seenDomRefs = false;
 let seenDomRefsFor = "";
 let creatingSmartpage = false;
+let webLayoutEnabled = true;
+let webLayoutDocId = "";
+let webLayoutUntil = 0;
+
+const WEB_LAYOUT_WINDOW_MS = 8000;
+const WEB_LAYOUT_SETTLE_MS = 2000;
 
 function usersOrNull(value) {
   const mapped = usersFrom(value);
@@ -162,115 +168,6 @@ function hookEditorUpdates() {
   listenTarget(editor?._layoutTypeManager, ["change", "layout", "update"], schedulePublish);
   listenTarget(xEditor, ["change", "dataChange", "transaction"], schedulePublish);
   listenTarget(xEditor?.dataCore, ["update", "change", "transaction"], schedulePublish);
-}
-
-const MEMBER_OPEN_CLASS = "wxov-member-open";
-let memberTipArmed = false;
-
-function markHiddenTip(el) {
-  if (!el || el.getAttribute("data-wxov-native-tip") === "1") return;
-  el.setAttribute("data-wxov-native-tip", "1");
-  el.style.setProperty("display", "none", "important");
-  el.style.setProperty("visibility", "hidden", "important");
-  el.style.setProperty("pointer-events", "none", "important");
-}
-
-function looksLikeMemberTipCard(el) {
-  if (!(el instanceof Element)) return false;
-  if (el.closest(`#${ROOT_ID}, #${FLOAT_LAYER_ID}`)) return false;
-  if (el.closest(".ent-collab-panel, .collab-list")) return false;
-  const text = String(el.textContent || "").replace(/\s+/g, "");
-  if (!/名成员/.test(text) || !/正在查看/.test(text)) return false;
-  if (text.length > 280) return false;
-  const rect = el.getBoundingClientRect();
-  if (rect.width > 560 || rect.height > 280) return false;
-  return true;
-}
-
-function hideNativeMemberTips() {
-  const nodes = document.querySelectorAll(
-    '[role="tooltip"], [class*="tooltip"], [class*="Tooltip"], [class*="popover"], [class*="popup"], [class*="overlay"], [class*="float"]'
-  );
-  for (let i = 0; i < nodes.length; i += 1) {
-    if (looksLikeMemberTipCard(nodes[i])) markHiddenTip(nodes[i]);
-  }
-  if (!document.body) return;
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    const value = node.nodeValue || "";
-    if (value.includes("名成员") || value.includes("正在查看")) {
-      let el = node.parentElement;
-      for (let depth = 0; el && depth < 6; depth += 1) {
-        if (looksLikeMemberTipCard(el)) {
-          markHiddenTip(el);
-          break;
-        }
-        el = el.parentElement;
-      }
-    }
-    node = walker.nextNode();
-  }
-}
-
-function mutationHasMemberTip(mutations) {
-  for (let i = 0; i < mutations.length; i += 1) {
-    const added = mutations[i].addedNodes;
-    for (let j = 0; j < added.length; j += 1) {
-      const node = added[j];
-      const text = node.nodeType === 1 ? node.textContent : node.nodeValue;
-      if (text && (text.includes("名成员") || text.includes("正在查看"))) return true;
-    }
-  }
-  return false;
-}
-
-function overMemberChrome(el) {
-  return Boolean(
-    el &&
-      el.closest &&
-      el.closest(`#${ROOT_ID}, #headerbar-member, .ent-collab-users, .member-wrapper`)
-  );
-}
-
-function bindNativeMemberTipMute() {
-  if (bindNativeMemberTipMute.done) return;
-  bindNativeMemberTipMute.done = true;
-  document.addEventListener(
-    "mouseover",
-    function (event) {
-      const target = event.target;
-      if (!(target instanceof Element) || !overMemberChrome(target)) return;
-      memberTipArmed = true;
-      hideNativeMemberTips();
-    },
-    true
-  );
-  document.addEventListener(
-    "mouseout",
-    function (event) {
-      const next = event.relatedTarget;
-      if (next instanceof Element && overMemberChrome(next)) return;
-      memberTipArmed = false;
-    },
-    true
-  );
-  document.addEventListener(
-    "click",
-    function (event) {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (document.documentElement.classList.contains(SILENT_PANEL_CLASS)) return;
-      if (target.closest(".ent-collab-users") && !target.closest(`#${ROOT_ID}`)) {
-        document.documentElement.classList.add(MEMBER_OPEN_CLASS);
-        return;
-      }
-      if (!target.closest(".ent-collab-panel, .member-wrapper, .collab-list")) {
-        document.documentElement.classList.remove(MEMBER_OPEN_CLASS);
-      }
-    },
-    true
-  );
 }
 
 function revealNativePanel() {
@@ -545,6 +442,54 @@ function canvasLayoutType() {
   return Number.isFinite(n) ? n : 2;
 }
 
+function isWebLayoutNow() {
+  const env = window.pad?.editor?.layoutController?.env;
+  if (env && typeof env.isWebLayout === "boolean") return Boolean(env.isWebLayout);
+  return canvasLayoutType() === WEB_LAYOUT_TYPE;
+}
+
+function clickWebLayoutMenu() {
+  const item = findByExactText("Web版式", { allowHidden: true });
+  return item ? clickNative(item) : false;
+}
+
+// 开关打开时，打开画布文档后短时间内切到 Web 版式。
+// 编辑器稍后可能用本地偏好盖回连页，所以成功后再观察一小段，避免只切一次就被打回。
+function applyWebLayoutIfNeeded() {
+  if (!webLayoutEnabled) return;
+  const path = parseDocPath(location.pathname);
+  if (!path || path.kind !== "doc") return;
+  if (webLayoutDocId !== path.id) {
+    webLayoutDocId = path.id;
+    webLayoutUntil = Date.now() + WEB_LAYOUT_WINDOW_MS;
+  }
+  if (!webLayoutUntil || Date.now() > webLayoutUntil) return;
+  if (isWebLayoutNow()) {
+    webLayoutUntil = Math.min(webLayoutUntil, Date.now() + WEB_LAYOUT_SETTLE_MS);
+    return;
+  }
+  const ltm = window.pad?.editor?._layoutTypeManager;
+  if (!ltm || typeof ltm.switchTo !== "function") return;
+  try {
+    if (Number(ltm.currentLayoutType) !== WEB_LAYOUT_TYPE) ltm.switchTo(WEB_LAYOUT_TYPE);
+  } catch {
+    /* 数字不对或尚未就绪时走菜单 */
+  }
+  if (!isWebLayoutNow()) clickWebLayoutMenu();
+}
+
+function onWebLayoutMessage(event) {
+  const detail = event.detail;
+  if (!detail || detail.source !== MSG_SOURCE) return;
+  const next = Boolean(detail.enabled);
+  if (next === webLayoutEnabled) return;
+  webLayoutEnabled = next;
+  if (webLayoutEnabled) {
+    webLayoutDocId = "";
+    schedulePublish();
+  }
+}
+
 function collectCanvasMetaPlace() {
   const editor = window.pad?.editor;
   const layoutType = canvasLayoutType();
@@ -558,9 +503,11 @@ function collectCanvasMetaPlace() {
   const pageLeft = twipPx(mar.left);
   const metaH = 26;
   const gap = 8;
-  const header = layoutType === 2 ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
+  const isWeb = Boolean(editor?.layoutController?.env?.isWebLayout) || layoutType === WEB_LAYOUT_TYPE;
+  const header = isWeb ? pageTop : Math.max(44, Math.round(pageTop * 0.5));
   return {
     layoutType,
+    isWebLayout: isWeb,
     metaTop: Math.round(Math.max(gap, header - metaH - gap)),
     metaLeft: Math.round(pageLeft),
   };
@@ -607,7 +554,8 @@ function collectDocMeta(viewers) {
     createdAt;
 
   const displayName = String(parsed.name || "").trim();
-  const place = path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, metaTop: 0, metaLeft: 0 };
+  const place =
+    path.kind === "doc" ? collectCanvasMetaPlace() : { layoutType: 0, isWebLayout: false, metaTop: 0, metaLeft: 0 };
 
   if (!name && !createdAt && !updatedAt) return null;
   return {
@@ -620,6 +568,7 @@ function collectDocMeta(viewers) {
     viewerId,
     creatorVid,
     layoutType: place.layoutType,
+    isWebLayout: Boolean(place.isWebLayout),
     metaTop: place.metaTop,
     metaLeft: place.metaLeft,
   };
@@ -653,6 +602,7 @@ function collectDocTitle() {
 function publish() {
   hookRuntimeUpdates();
   hookEditorUpdates();
+  applyWebLayoutIfNeeded();
   const viewers = collectViewers() || [];
   const total = collectTotalCount(viewers.length);
   if (viewers.length) primed = true;
@@ -804,9 +754,9 @@ function hookHistory() {
 window.__WECOM_BETTER__ = "1.0.3";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
+document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
 window.addEventListener("message", onCreateMessage);
 hookHistory();
-bindNativeMemberTipMute();
 publish();
 window.setTimeout(primeViewersIfNeeded, 800);
 window.setTimeout(primeViewersIfNeeded, 2400);
@@ -822,7 +772,6 @@ function mutationFromOurUi(mutation) {
 }
 
 new MutationObserver(function (mutations) {
-  if (memberTipArmed || mutationHasMemberTip(mutations)) hideNativeMemberTips();
   if (mutations.every(mutationFromOurUi)) return;
   schedulePublish();
 }).observe(document.documentElement, {

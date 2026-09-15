@@ -5,6 +5,8 @@ const toggles = {
   [FEATURE_IDS.viewers]: document.getElementById("toggle-viewers"),
   [FEATURE_IDS.refs]: document.getElementById("toggle-refs"),
   [FEATURE_IDS.docMeta]: document.getElementById("toggle-doc-meta"),
+  [FEATURE_IDS.webLayout]: document.getElementById("toggle-web-layout"),
+  [FEATURE_IDS.create]: document.getElementById("toggle-create"),
 };
 
 function paint(features) {

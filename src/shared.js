@@ -27,6 +27,8 @@ export const FEATURE_IDS = {
   refs: "refs",
   search: "search",
   docMeta: "docMeta",
+  webLayout: "webLayout",
+  create: "create",
 };
 
 export const DEFAULT_FEATURES = {
@@ -34,12 +36,16 @@ export const DEFAULT_FEATURES = {
   refs: true,
   search: true,
   docMeta: true,
+  webLayout: true,
+  create: true,
 };
 
 export const SNAPSHOT_EVENT = "wecom-better:snapshot";
 export const HELLO_EVENT = "wecom-better:hello";
 export const CREATE_SMARTPAGE_EVENT = "wecom-better:create-smartpage";
 export const CREATE_SMARTPAGE_MSG = "create-smartpage";
+export const WEB_LAYOUT_EVENT = "wecom-better:web-layout";
+export const WEB_LAYOUT_TYPE = 8;
 
 export function parseLabel(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();

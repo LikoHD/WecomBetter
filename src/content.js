@@ -26,6 +26,7 @@ import {
   SEARCH_SETTINGS_ID,
   SNAPSHOT_EVENT,
   WANDER_ROOT_ID,
+  WEB_LAYOUT_EVENT,
   extensionAlive,
   isDocDetailPage,
   isHomePage,
@@ -47,6 +48,21 @@ let last = {
 let contentReadyFor = "";
 let lastPageKey = "";
 let applyRetryTimer = 0;
+let lastWebLayoutSent = null;
+
+// 把「默认 Web 版式」开关状态告诉 MAIN（chrome.storage 只在 isolated 侧可读）。
+// 只对画布文档生效的判断放在 MAIN，这里只管把开关值传过去。
+function syncWebLayout() {
+  const enabled = features.webLayout !== false;
+  if (enabled === lastWebLayoutSent) return;
+  lastWebLayoutSent = enabled;
+  document.dispatchEvent(
+    new CustomEvent(WEB_LAYOUT_EVENT, {
+      bubbles: true,
+      detail: { source: MSG_SOURCE, enabled },
+    })
+  );
+}
 
 function pageContentReady() {
   const id = currentPageKey();
@@ -78,7 +94,7 @@ function apply() {
     return;
   }
 
-  if (isRefDocsPage()) {
+  if (features.create !== false && isRefDocsPage()) {
     renderToolbar();
   } else {
     unmountToolbar();
@@ -167,6 +183,7 @@ function snapshotSig(detail) {
     detail.docMeta?.createdAt || "",
     detail.docMeta?.updatedAt || "",
     detail.docMeta?.layoutType ?? "",
+    detail.docMeta?.isWebLayout ? "1" : "0",
     detail.docMeta?.metaTop ?? "",
     detail.docMeta?.metaLeft ?? "",
     detail.docTitle || "",
@@ -179,6 +196,8 @@ let lastSnapshotSig = "";
 function onSnapshot(event) {
   const detail = event.detail;
   if (!detail || detail.source !== MSG_SOURCE) return;
+  // 收到快照说明 MAIN 已就绪，趁机把开关状态同步过去
+  syncWebLayout();
   const next = {
     viewers: Array.isArray(detail.viewers) ? detail.viewers : [],
     total: Number(detail.total) || 0,
@@ -269,6 +288,7 @@ async function startApp() {
     chrome.storage.onChanged.addListener(async function (changes, area) {
       if (!extensionAlive() || area !== "sync" || !changes.features) return;
       features = await readFeatures();
+      syncWebLayout();
       apply();
     });
   } catch {

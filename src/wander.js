@@ -320,12 +320,9 @@ function creatorQueries(meta) {
   const name = String(meta?.name || "").trim();
   const display = String(meta?.displayName || "").trim();
   const vid = String(meta?.creatorVid || "").trim();
-  const viewer = String(meta?.viewerId || "").trim();
   const queries = [];
   if (display) queries.push(display);
   if (name && name !== display) queries.push(name);
-  if (viewer && viewer !== name && viewer !== display) queries.push(viewer);
-  if (!queries.length && vid) queries.push(vid);
   return { queries, vid };
 }
 
@@ -392,11 +389,14 @@ async function searchCreatorDocs(meta) {
   const { queries, vid } = creatorQueries(meta);
   if (!queries.length && !vid) return [];
   let files = [];
+  if (vid) {
+    files = await safeSearch("", 7, { and_creater: [vid] });
+    if (!files.length && queries[0]) {
+      files = await safeSearch(queries[0], 7, { and_creater: [vid] });
+    }
+  }
   for (let i = 0; i < queries.length && !files.length; i += 1) {
     files = await safeSearch(queries[i], 7);
-  }
-  if (!files.length && vid) {
-    files = await safeSearch(queries[0] || "", 7, { and_creater: [vid] });
   }
   if (!files.length && queries[0]) files = await safeSearch(queries[0], 5);
   return files.filter(function (file) {
@@ -474,7 +474,7 @@ async function loadPools() {
   try {
     const keywords = pickKeywords(title);
     const exclude = buildExclude(ui.refs);
-    const wantCreator = Boolean(meta && (meta.name || meta.displayName || meta.creatorVid || meta.viewerId));
+    const wantCreator = Boolean(meta && (meta.creatorVid || meta.name || meta.displayName));
     const parts = await Promise.all([
       keywords.length ? searchByKeywords(keywords) : Promise.resolve([]),
       wantCreator ? searchCreatorDocs(meta) : Promise.resolve([]),

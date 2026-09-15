@@ -174,10 +174,7 @@
 }
 
 html.wxov-silent-panel .member-wrapper.ent-collab-panel,
-html.wxov-silent-panel .ent-collab-panel,
-html:not(.wxov-member-open) .member-wrapper.ent-collab-panel,
-html:not(.wxov-member-open) .ent-collab-panel,
-[data-wxov-native-tip="1"] {
+html.wxov-silent-panel .ent-collab-panel {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
