@@ -719,7 +719,7 @@ function hookHistory() {
   window.addEventListener("popstate", schedulePublish);
 }
 
-window.__WECOM_BETTER__ = "1.0.3";
+window.__WECOM_BETTER__ = "1.0.4";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
 document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
