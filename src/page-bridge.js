@@ -34,8 +34,6 @@ let primed = false;
 let tickTimer = 0;
 let hooked = false;
 let hookedEditor = false;
-let seenDomRefs = false;
-let seenDomRefsFor = "";
 let creatingSmartpage = false;
 let webLayoutEnabled = true;
 let webLayoutDocId = "";
@@ -297,6 +295,64 @@ function collectRefsFromMelo() {
   return items;
 }
 
+const FIELD_BEGIN = "\u0013";
+const FIELD_SEP = "\u0014";
+const FIELD_END = "\u0015";
+const DOC_TEXT_STEP = 8000;
+const DOC_TEXT_OVERLAP = 2500;
+
+function docTextPool() {
+  const pool = window.pad?.editor?._state?._dataEngine?.dataStream?.textPool;
+  if (!pool || typeof pool.size !== "function" || typeof pool.subText !== "function") return null;
+  return pool;
+}
+
+function pushHyperlinkField(items, text, at) {
+  if (at === 0 || text.charAt(at - 1) !== FIELD_BEGIN) return at === 0 ? "partial" : "skip";
+  const rest = text.slice(at + "HYPERLINK ".length);
+  const urlMatch = rest.match(/^["']?(https?:\/\/\S+?)["']?(?=\s)/i);
+  if (!urlMatch || !takeDocUrl(urlMatch[1])) return "skip";
+  const sepAt = rest.indexOf(FIELD_SEP);
+  const endAt = sepAt >= 0 ? rest.indexOf(FIELD_END, sepAt) : -1;
+  if (sepAt < 0 || endAt < 0) return "partial";
+  items.push({
+    title: rest.slice(sepAt + 1, endAt).replace(/[\u0000-\u001f]/g, ""),
+    url: urlMatch[1],
+  });
+  return "ok";
+}
+
+// 长文档画布只排视口附近的块，DOM 里看不到文首的引用。
+// 正文文本流里的 HYPERLINK 域是全文，格式为 0x13 + 域代码 + 0x14 + 标题 + 0x15。
+function collectRefsFromDocText() {
+  const pool = docTextPool();
+  if (!pool) return [];
+  const size = Number(pool.size()) || 0;
+  if (size < 12) return [];
+  const items = [];
+  const marker = "HYPERLINK ";
+  let pos = 0;
+  while (pos < size) {
+    const len = Math.min(DOC_TEXT_STEP + DOC_TEXT_OVERLAP, size - pos);
+    const text = String(pool.subText(pos, len) || "");
+    let from = 0;
+    while (from < text.length) {
+      const at = text.indexOf(marker, from);
+      if (at < 0) break;
+      const status = pushHyperlinkField(items, text, at);
+      if (status === "partial" && pos + at > 0 && at < DOC_TEXT_STEP) {
+        const retry = String(pool.subText(Math.max(0, pos + at - 1), 4000) || "");
+        const retryAt = retry.indexOf(marker);
+        if (retryAt >= 0) pushHyperlinkField(items, retry, retryAt);
+      }
+      from = at + marker.length;
+    }
+    if (pos + DOC_TEXT_STEP >= size) break;
+    pos += DOC_TEXT_STEP;
+  }
+  return items;
+}
+
 function readReactDocLink(el) {
   const key = Object.keys(el).find(function (name) {
     return name.startsWith("__reactInternalInstance") || name.startsWith("__reactFiber");
@@ -354,10 +410,6 @@ function collectRefsFromDom() {
 function collectRefDocs() {
   const self = parseDocPath(location.pathname);
   if (!self) return [];
-  if (seenDomRefsFor !== self.id) {
-    seenDomRefsFor = self.id;
-    seenDomRefs = false;
-  }
   const bucket = new Map();
   function add(item) {
     addRefItem(bucket, item.title, item.url, self);
@@ -366,16 +418,9 @@ function collectRefDocs() {
     collectRefsFromSmartpagePool().forEach(add);
     collectRefsFromDom().forEach(add);
   } else if (self.kind === "doc") {
+    collectRefsFromMelo().forEach(add);
     collectRefsFromDom().forEach(add);
-    if (bucket.size) seenDomRefs = true;
-    if (!bucket.size && !seenDomRefs) {
-      collectRefsFromMelo().forEach(add);
-    } else if (bucket.size) {
-      collectRefsFromMelo().forEach(function (item) {
-        const parsed = parseDocUrl(item.url);
-        if (parsed && bucket.has(parsed.id)) add(item);
-      });
-    }
+    collectRefsFromDocText().forEach(add);
   }
   return [...bucket.values()].sort(function (a, b) {
     return String(a.id).localeCompare(String(b.id));
