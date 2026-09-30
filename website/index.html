@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WecomBetter 企微搭子 — 让企微文档，好用那么一点</title>
+  <meta name="description" content="企业微信文档 Chrome 扩展：顶栏快捷搜索、在看头像、关联文档、标题作者时间、默认 Web 版式、快速创建。免费开源，数据不出本机。" />
+  <link rel="icon" type="image/png" href="assets/icon48.png" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/hero.css" />
+  <link rel="stylesheet" href="css/features.css" />
+  <link rel="stylesheet" href="css/closing.css" />
+</head>
+<body>
+<!-- S0 导航 · 顶部居中悬浮胶囊（Dia 实测规格：不透明 + 常置描边 + 双层微阴影） -->
+<nav class="nav-shell" aria-label="主导航">
+  <a class="nav-brand" href="#top">
+    <img class="nav-logo" src="assets/icon48.png" alt="企微搭子" width="24" height="24">
+    <span class="nav-name">企微搭子</span>
+  </a>
+</nav>
+
+<!-- S1 Hero -->
+<section class="hero" id="top">
+  <canvas class="hero-sky" aria-hidden="true"></canvas>
+  <div class="hero-haze" aria-hidden="true"></div>
+  <div class="hero-arch" aria-hidden="true"></div>
+
+  <div class="hero-inner container">
+    <h1 class="hero-title">
+      <span class="hero-title-mask"><span class="hero-title-line">让企微文档，</span></span>
+      <span class="hero-title-mask"><span class="hero-title-line">好用那么一点。</span></span>
+    </h1>
+    <div class="hero-ctas">
+      <a class="btn hero-btn-download" href="https://chromewebstore.google.com/detail/%E4%BC%81%E5%BE%AE%E6%90%AD%E5%AD%90/hdekdcibebjbealobngklalnghfnjnoi?hl=en">免费下载<svg class="hero-btn-arrow" width="14" height="17" viewBox="0 0 14 17" fill="none" aria-hidden="true"><path d="M7 1.5V11.5M2.75 7.25 7 11.5 11.25 7.25M1.5 15.5H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="btn-ghost hero-btn-ghost" href="#features">查看功能</a>
+    </div>
+
+    <!-- 模拟企微文档窗口 · M5 搜索循环动效 + M4.5 反向视差 -->
+    <div class="hero-window" aria-hidden="true">
+      <div class="hero-window-bar">
+        <span class="hero-dots">
+          <i class="hero-dot hero-dot-r"></i>
+          <i class="hero-dot hero-dot-y"></i>
+          <i class="hero-dot hero-dot-g"></i>
+        </span>
+        <div class="hero-search">
+          <svg class="hero-search-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M11 11l3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span class="hero-search-text"></span><span class="hero-caret"></span>
+        </div>
+      </div>
+
+      <div class="hero-suggest">
+        <div class="hero-suggest-item is-active">
+          <svg class="hero-suggest-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4.5 2h4.8L12 4.7V14H4.5V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9.3 2v2.7H12" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-suggest-title">周报模板</span>
+          <span class="hero-suggest-meta">智能文档</span>
+        </div>
+        <div class="hero-suggest-item">
+          <svg class="hero-suggest-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4.5 2h4.8L12 4.7V14H4.5V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9.3 2v2.7H12" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-suggest-title">产品周报</span>
+          <span class="hero-suggest-meta">智能文档</span>
+        </div>
+        <div class="hero-suggest-item">
+          <svg class="hero-suggest-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4.5 2h4.8L12 4.7V14H4.5V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9.3 2v2.7H12" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+          <span class="hero-suggest-title">团队 OKR 周报</span>
+          <span class="hero-suggest-meta">智能文档</span>
+        </div>
+      </div>
+
+      <div class="hero-window-body">
+        <div class="hero-skel" style="width:34%;height:18px;border-radius:8px"></div>
+        <div class="hero-skel" style="width:100%"></div>
+        <div class="hero-skel" style="width:97%"></div>
+        <div class="hero-skel" style="width:88%"></div>
+        <div class="hero-skel" style="width:52%"></div>
+        <div class="hero-skel" style="width:22%;height:12px;margin-top:14px"></div>
+        <div class="hero-skel" style="width:100%"></div>
+        <div class="hero-skel" style="width:94%"></div>
+        <div class="hero-skel" style="width:64%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右上装饰 · 金色星形贴纸（深色手写字保对比） -->
+  <a class="hero-sticker" href="https://chromewebstore.google.com/detail/%E4%BC%81%E5%BE%AE%E6%90%AD%E5%AD%90/hdekdcibebjbealobngklalnghfnjnoi?hl=en" aria-label="免费下载">
+    <svg class="hero-sticker-star" viewBox="0 0 120 120" aria-hidden="true">
+      <polygon fill="currentColor" points="60,8 70.4,21.4 86,15 88.3,31.7 105,34 98.6,49.7 112,60 98.6,70.4 105,86 88.3,88.3 86,105 70.4,98.6 60,112 49.7,98.6 34,105 31.7,88.3 15,86 21.4,70.4 8,60 21.4,49.7 15,34 31.7,31.7 34,15 49.7,21.4"/>
+    </svg>
+    <span class="hero-sticker-text">Let's go →</span>
+  </a>
+</section>
+
+<!-- S2 Marquee · chips 无限滚动带（第二份由 hero.js 克隆衔接） -->
+<section class="marquee" aria-label="特性一览">
+  <div class="marquee-track">
+    <div class="marquee-group">
+      <span class="marquee-chip">顶栏快捷搜索</span>
+      <span class="marquee-chip">在看头像</span>
+      <span class="marquee-chip">关联文档</span>
+      <span class="marquee-chip">标题作者时间</span>
+      <span class="marquee-chip">默认 Web 版式</span>
+      <span class="marquee-chip">快速创建</span>
+      <span class="marquee-chip">本地运行</span>
+      <span class="marquee-chip">不上传数据</span>
+      <span class="marquee-chip">免费开源</span>
+      <span class="marquee-chip">Chrome 扩展</span>
+    </div>
+  </div>
+</section>
+
+<!-- S3 · 功能编号列表 × sticky 演示窗（M4 + M5） -->
+<section id="features" class="feat-sec">
+  <div class="container">
+    <div class="feat-head reveal">
+      <p class="eyebrow">FEATURES</p>
+      <h2 class="feat-title">六个功能，一个比一个顺手。</h2>
+    </div>
+
+    <div class="feat-body">
+      <div class="feat-list">
+        <div class="feat-item is-active" data-feat="0">
+          <span class="feat-num">01</span>
+          <h3 class="feat-item-title">顶栏快捷搜索</h3>
+          <div class="feat-slot">
+            <div class="feat-win" aria-hidden="true">
+              <div class="feat-win-bar">
+                <span class="feat-dot feat-dot-r"></span>
+                <span class="feat-dot feat-dot-y"></span>
+                <span class="feat-dot feat-dot-g"></span>
+                <span class="feat-win-url">doc.weixin.qq.com</span>
+              </div>
+              <div class="feat-win-body" data-slot="0"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-item" data-feat="1">
+          <span class="feat-num">02</span>
+          <h3 class="feat-item-title">正在查看头像</h3>
+          <p class="feat-desc">顶栏堆叠此刻在看的人。hover 看名字，点击复制 ID——协作前先知道谁在场。</p>
+          <div class="feat-slot">
+            <div class="feat-win" aria-hidden="true">
+              <div class="feat-win-bar">
+                <span class="feat-dot feat-dot-r"></span>
+                <span class="feat-dot feat-dot-y"></span>
+                <span class="feat-dot feat-dot-g"></span>
+                <span class="feat-win-url">doc.weixin.qq.com</span>
+              </div>
+              <div class="feat-win-body" data-slot="1"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feat-item" data-feat="2">
+          <span class="feat-num">03</span>
+          <h3 class="feat-item-title">本文关联文档</h3>
+          <p class="feat-desc">滚到文末，自动列出文内引用的所有文档。顺藤摸瓜，不用翻来翻去。</p>
+          <div class="feat-slot">
+            <div class="feat-win" aria-hidden="true">
+              <div class="feat-win-bar">
+                <span class="feat-dot feat-dot-r"></span>
+                <span class="feat-dot feat-dot-y"></span>
+                <span class="feat-dot feat-dot-g"></span>
+                <span class="feat-win-url">doc.weixin.qq.com</span>
+              </div>
+              <div class="feat-win-body" data-slot="2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat-stage">
+        <div class="feat-sticky">
+          <div class="feat-win" aria-hidden="true">
+            <div class="feat-win-bar">
+              <span class="feat-dot feat-dot-r"></span>
+              <span class="feat-dot feat-dot-y"></span>
+              <span class="feat-dot feat-dot-g"></span>
+              <span class="feat-win-url">doc.weixin.qq.com</span>
+            </div>
+            <div class="feat-win-body">
+
+              <!-- M5 · 窗 1：顶栏快捷搜索 -->
+              <div class="feat-pane feat-pane-s is-active" data-pane="0">
+                <div class="feat-s-top">
+                  <div class="feat-s-box">
+                    <svg class="feat-s-ic" viewBox="0 0 16 16" aria-hidden="true">
+                      <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                      <path d="M10.6 10.6 13.8 13.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                    </svg>
+                    <span class="feat-s-ph">搜索文档</span>
+                    <span class="feat-s-query"></span><span class="feat-s-caret"></span>
+                  </div>
+                  <div class="feat-s-list">
+                    <div class="feat-s-sug">
+                      <span class="feat-s-file"></span>
+                      <span class="feat-s-sug-t">会议纪要 0929 · 产品周例会</span>
+                      <span class="feat-s-sug-d">智能文档</span>
+                    </div>
+                    <div class="feat-s-sug">
+                      <span class="feat-s-file"></span>
+                      <span class="feat-s-sug-t">会议纪要 0922 · 产品周例会</span>
+                      <span class="feat-s-sug-d">智能文档</span>
+                    </div>
+                    <div class="feat-s-sug">
+                      <span class="feat-s-file"></span>
+                      <span class="feat-s-sug-t">会议纪要模板</span>
+                      <span class="feat-s-sug-d">模板</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="feat-s-doc">
+                  <div class="feat-sk feat-sk-title" style="width:44%"></div>
+                  <div class="feat-sk" style="width:92%"></div>
+                  <div class="feat-sk" style="width:88%"></div>
+                  <div class="feat-sk" style="width:95%"></div>
+                  <div class="feat-sk" style="width:62%"></div>
+                  <div class="feat-sk-gap"></div>
+                  <div class="feat-sk" style="width:90%"></div>
+                  <div class="feat-sk" style="width:84%"></div>
+                </div>
+              </div>
+
+              <!-- M5 · 窗 2：正在查看头像 -->
+              <div class="feat-pane feat-pane-a" data-pane="1">
+                <div class="feat-a-top">
+                  <div class="feat-a-crumb">
+                    <span class="feat-a-logo"></span>
+                    <span class="feat-sk" style="width:120px"></span>
+                  </div>
+                  <div class="feat-a-stack">
+                    <span class="feat-av feat-av-1">张</span>
+                    <span class="feat-av feat-av-2">李</span>
+                    <span class="feat-av feat-av-3">王</span>
+                    <span class="feat-a-tip">张三 · 点击复制 ID</span>
+                  </div>
+                </div>
+                <div class="feat-a-doc">
+                  <div class="feat-sk feat-sk-title" style="width:40%"></div>
+                  <div class="feat-sk" style="width:92%"></div>
+                  <div class="feat-sk" style="width:85%"></div>
+                  <div class="feat-sk" style="width:94%"></div>
+                  <div class="feat-sk" style="width:58%"></div>
+                  <div class="feat-sk-gap"></div>
+                  <div class="feat-sk" style="width:90%"></div>
+                  <div class="feat-sk" style="width:88%"></div>
+                  <div class="feat-sk" style="width:40%"></div>
+                </div>
+              </div>
+
+              <!-- M5 · 窗 3：本文关联文档 -->
+              <div class="feat-pane feat-pane-r" data-pane="2">
+                <div class="feat-r-view">
+                  <div class="feat-r-scroll">
+                    <div class="feat-sk feat-sk-title" style="width:38%"></div>
+                    <div class="feat-sk" style="width:93%"></div>
+                    <div class="feat-sk" style="width:87%"></div>
+                    <div class="feat-sk" style="width:95%"></div>
+                    <div class="feat-sk" style="width:61%"></div>
+                    <div class="feat-sk-gap"></div>
+                    <div class="feat-sk" style="width:90%"></div>
+                    <div class="feat-sk" style="width:84%"></div>
+                    <div class="feat-sk" style="width:92%"></div>
+                    <div class="feat-sk" style="width:56%"></div>
+                    <div class="feat-sk-gap"></div>
+                    <div class="feat-sk" style="width:94%"></div>
+                    <div class="feat-sk" style="width:89%"></div>
+                    <div class="feat-sk" style="width:71%"></div>
+                    <div class="feat-sk-gap"></div>
+                    <div class="feat-sk" style="width:92%"></div>
+                    <div class="feat-sk" style="width:86%"></div>
+                    <div class="feat-sk" style="width:64%"></div>
+                    <div class="feat-r-refs">
+                      <p class="feat-r-refs-t">本文引用</p>
+                      <div class="feat-r-card">
+                        <span class="feat-r-ic">
+                          <svg viewBox="0 0 14 14" aria-hidden="true">
+                            <path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                            <path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="feat-r-cols">
+                          <span class="feat-r-ct">2026 产品路线图</span>
+                          <span class="feat-r-cd">智能文档 · 张三</span>
+                        </span>
+                      </div>
+                      <div class="feat-r-card">
+                        <span class="feat-r-ic">
+                          <svg viewBox="0 0 14 14" aria-hidden="true">
+                            <path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                            <path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="feat-r-cols">
+                          <span class="feat-r-ct">设计规范 v3.0</span>
+                          <span class="feat-r-cd">智能文档 · 李四</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S4 · bento 网格 -->
+<section class="bento-sec">
+  <div class="container">
+    <div class="bento-head reveal">
+      <p class="eyebrow">MORE</p>
+      <h2 class="bento-title">还有这些。</h2>
+    </div>
+
+    <div class="bento-grid">
+      <article class="bento-card reveal">
+        <p class="bento-tag">META</p>
+        <h3 class="bento-card-title">标题作者与时间</h3>
+        <p class="bento-text">标题下面直接显示创建人和最后编辑时间，不用点开详情页。</p>
+        <div class="bento-demo bento-m1" aria-hidden="true">
+          <div class="bento-m1-doc">
+            <div class="bento-m1-title"></div>
+            <div class="bento-m1-meta">
+              <span class="bento-m1-ava">张</span>
+              <span>张三 创建于 9月12日 · 最后编辑 10:24</span>
+            </div>
+            <div class="bento-m1-lines">
+              <i style="width:94%"></i>
+              <i style="width:88%"></i>
+              <i style="width:96%"></i>
+              <i style="width:70%"></i>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="bento-card reveal">
+        <p class="bento-tag">LAYOUT</p>
+        <h3 class="bento-card-title">默认 Web 版式</h3>
+        <p class="bento-text">打开文档自动切到 Web 版式，正文铺满不分页。</p>
+        <div class="bento-demo bento-m2" aria-hidden="true">
+          <div class="bento-m2-cap">
+            <span class="bento-m2-cap-a">分页</span>
+            <span class="bento-m2-cap-b">WEB 版式</span>
+          </div>
+          <div class="bento-m2-stage">
+            <div class="bento-m2-page bento-m2-a"></div>
+            <div class="bento-m2-page bento-m2-b"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="bento-card reveal">
+        <p class="bento-tag">CREATE</p>
+        <h3 class="bento-card-title">快速创建文档</h3>
+        <p class="bento-text">顶栏加号按钮，一键新建智能文档。</p>
+        <div class="bento-demo bento-m3" aria-hidden="true">
+          <div class="bento-m3-bar">
+            <span class="bento-m3-logo"></span>
+            <span class="bento-m3-pill" style="width:96px"></span>
+            <span class="bento-m3-plus">
+              <svg viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M7 3v8M3 7h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </article>
+
+      <article class="bento-card bento-privacy reveal" id="privacy">
+        <svg class="bento-pv-dash" aria-hidden="true">
+          <rect x="1" y="1" rx="23"></rect>
+        </svg>
+        <div class="bento-pv">
+          <div class="bento-pv-left">
+            <span class="bento-pv-lock">
+              <svg viewBox="0 0 18 18" aria-hidden="true">
+                <rect x="3.5" y="8" width="11" height="7" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M6 8V5.8a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+                <circle cx="9" cy="11.5" r="1.1" fill="currentColor"/>
+              </svg>
+            </span>
+            <h3 class="bento-card-title">本地运行，零上传</h3>
+          </div>
+          <div class="bento-pv-panel" aria-hidden="true">
+            <p class="bento-pv-row"><span class="bento-pv-k">COLLECT</span><span class="bento-pv-v">0</span></p>
+            <p class="bento-pv-row"><span class="bento-pv-k">UPLOAD</span><span class="bento-pv-v">0</span></p>
+            <p class="bento-pv-row"><span class="bento-pv-k">NETWORK</span><span class="bento-pv-v">OFF</span></p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- WecomBetter 官网 · 收尾区片段（S5 安装 / S6 页尾 CTA+日出 M7 / S7 页脚）
+     依赖：tokens.css + base.css（.container .eyebrow .btn .reveal .link-line）
+           + main.js（.reveal 滚动入场）+ css/closing.css + js/closing.js
+     组装时嵌入 index.html 末尾。 -->
+
+<!-- S6 页尾 CTA + 日出（M7 签名收尾） -->
+<section class="cta-sec">
+  <div class="cta-sun" aria-hidden="true">
+    <div class="cta-sun-core"></div>
+  </div>
+  <div class="container cta-inner reveal">
+    <h2 class="cta-title">即刻使用。</h2>
+    <a class="btn cta-btn" href="https://chromewebstore.google.com/detail/%E4%BC%81%E5%BE%AE%E6%90%AD%E5%AD%90/hdekdcibebjbealobngklalnghfnjnoi?hl=en">免费下载<svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.8" aria-hidden="true" focusable="false"><path d="M7 1.5V11.5M2.75 7.25 7 11.5 11.25 7.25M1.5 15.5H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</section>
+
+<!-- S7 页脚 -->
+<footer class="foot-sec">
+  <div class="container">
+    <div class="foot-bottom">
+      <div class="foot-brand">
+        <img class="foot-logo" src="assets/icon48.png" alt="企微搭子" width="20" height="20">
+        <span class="foot-name">企微搭子</span>
+      </div>
+      <p class="foot-copy">© 2026 WECOMBETTER · 企微搭子</p>
+    </div>
+  </div>
+</footer>
+<script src="js/main.js" defer></script>
+<script src="js/hero.js" defer></script>
+<script src="js/features.js" defer></script>
+<script src="js/closing.js" defer></script>
+</body>
+</html>

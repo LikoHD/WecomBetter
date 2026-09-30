@@ -1,0 +1,40 @@
+/* WecomBetter 官网设计令牌 —— 与 website/DESIGN.md 一一对应，唯一事实源，禁止改动 */
+
+:root {
+  /* 色板 */
+  --paper: #FBFAF6;
+  --paper-soft: #F8F8F8;
+  --ink: rgba(0, 0, 0, 0.85);
+  --ink-2: rgba(0, 0, 0, 0.60);
+  --ink-3: rgba(0, 0, 0, 0.45);
+  --stroke: rgba(0, 0, 0, 0.10);
+  --fill: rgba(0, 0, 0, 0.05);
+  --btn: #000000;
+  --gold: #FFB005;
+  --gold-deep: #ECB826;
+  --glow: #FFE48C;
+  --wecom: #267EF0;
+  --sunset: #FF6F3C;
+
+  /* 字体（SF 优先，Apple 原生栈，无外部字体依赖） */
+  --font-display: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", "Noto Sans SC", sans-serif;
+  --font-body: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Menlo", monospace;
+  --font-hand: "Bradley Hand", "Segoe Print", cursive;
+
+  /* 动效 */
+  --ease-dia: cubic-bezier(0.87, 0, 0.13, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-hover: 200ms;
+  --dur-base: 350ms;
+  --dur-reveal: 800ms;
+  --dur-hero: 1200ms;
+
+  /* 布局 */
+  --container: 1120px;
+  --section-pad: 120px;
+  --radius-card: 24px;
+  --radius-pill: 999px;
+  --radius-nav: 16px;
+}

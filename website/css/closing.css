@@ -1,0 +1,336 @@
+/* WecomBetter 官网 · 收尾区样式（S5 安装 / S6 页尾 CTA+日出 M7 / S7 页脚）
+   只用 tokens.css 变量；所有选择器以 .install- / .cta- / .foot- 开头 */
+
+/* ========== S5 安装 ========== */
+.install-sec {
+  padding: var(--section-pad) 0;
+}
+
+.install-title {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4vw, 46px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.install-steps {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.install-card {
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-card);
+  padding: 32px;
+}
+
+.install-num {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink-3);
+}
+
+.install-card-title {
+  margin: 20px 0 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.install-card-desc {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.install-card-desc code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--fill);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+/* 卡 2 微型浏览器窗口示意 */
+.install-mini {
+  margin-top: 24px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.install-mini-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.install-mini-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--stroke);
+}
+
+.install-mini-body {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.install-mini-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.install-mini-switch {
+  position: relative;
+  width: 22px;
+  height: 13px;
+  border-radius: var(--radius-pill);
+  background: var(--gold);
+}
+
+.install-mini-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.install-mini-pill {
+  font-size: 12px;
+  color: var(--ink-2);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  background: var(--paper);
+}
+
+/* ========== S6 页尾 CTA + 日出（M7） ========== */
+.cta-sec {
+  position: relative;
+  overflow: hidden;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--section-pad) 0;
+}
+
+/* 外层只负责定位与入场（translate/opacity），避免与脉动 scale 冲突 */
+.cta-sun {
+  position: absolute;
+  left: 50%;
+  bottom: -25vh; /* 50vh 高只露上半，像太阳从页面底部升起 */
+  width: 120vw;
+  height: 50vh;
+  margin-left: -60vw;
+  transform: translateY(60px);
+  opacity: 0.6;
+  transition:
+    transform var(--dur-hero) var(--ease-dia),
+    opacity var(--dur-hero) var(--ease-dia);
+  pointer-events: none;
+}
+
+.cta-sun.is-in {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 内层承载渐变光晕与 8s 极缓慢脉动；透明度衰减模拟 blur，不用 filter */
+.cta-sun-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    var(--glow) 0%,
+    var(--gold) 52%,
+    rgba(255, 176, 5, 0.35) 68%,
+    rgba(255, 176, 5, 0) 82%
+  );
+}
+
+.cta-sun.is-in .cta-sun-core {
+  animation: cta-sun-pulse 8s ease-in-out 1.2s infinite;
+}
+
+@keyframes cta-sun-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.cta-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.cta-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(44px, 6vw, 72px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.cta-sub {
+  margin: 22px 0 0;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.cta-btn {
+  margin-top: 40px;
+}
+
+.cta-note {
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* ========== S7 页脚 ========== */
+.foot-sec {
+  border-top: 1px solid var(--stroke);
+  padding: 48px 0 32px;
+  background: var(--paper);
+}
+
+.foot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.foot-head {
+  margin: 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.foot-link {
+  display: block;
+  width: fit-content;
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color var(--dur-hover) ease;
+}
+
+.foot-link:hover {
+  color: var(--ink);
+}
+
+.foot-bottom {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.foot-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.foot-logo {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.foot-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.foot-copy {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 960px) {
+  .install-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .foot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .install-sec {
+    padding: 80px 0;
+  }
+
+  .foot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .foot-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+/* ========== reduced-motion：日出直接终态，无脉动 ========== */
+@media (prefers-reduced-motion: reduce) {
+  .cta-sun {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .cta-sun.is-in .cta-sun-core {
+    animation: none;
+  }
+}
