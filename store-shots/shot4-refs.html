@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .shot-head { padding-top: 46px; }
+  .shot-head h1 { font-size: 40px; }
+  .stage { width: 1060px; margin: 34px auto 0; position: relative; }
+  .stage .win { height: auto; }
+  .doc-page { padding-top: 26px; padding-bottom: 44px; }
+  .refs-zone { position: relative; }
+  .refs-zone .ink-ring { top: -12px; left: -22px; width: calc(100% + 44px); height: calc(100% + 26px); transform: rotate(-0.8deg); }
+  .refs-zone .ink-note { top: -64px; right: 8px; }
+</style>
+</head>
+<body>
+
+<header class="shot-head">
+  <p class="eyebrow">Feature 03 · Referenced Docs</p>
+  <h1>滚到文末，引用自动列好。</h1>
+  <p class="sub">文内引用的所有文档自动列出。<em>顺藤摸瓜，不用翻来翻去。</em></p>
+</header>
+
+<div class="stage">
+  <div class="win">
+    <div class="win-bar">
+      <span class="win-dot r"></span><span class="win-dot y"></span><span class="win-dot g"></span>
+      <span class="win-url">doc.weixin.qq.com/smartpage/abc123</span>
+    </div>
+    <div class="win-body">
+      <div class="doc-topbar">
+        <div class="doc-id">
+          <svg class="doc-file-ic" viewBox="0 0 24 24"><path d="M6 2.5h8L19 7.5v13a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20.5v-16A1.5 1.5 0 0 1 6 2.5z" fill="#E8F1FE"/><path d="M14 2.5 19 7.5h-4a1 1 0 0 1-1-1v-4z" fill="#B9D4FB"/><path d="M8.5 12h7M8.5 15.5h7M8.5 8.8h3" stroke="#336DF4" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span class="doc-name">2026 Q4 产品路线图</span>
+        </div>
+        <div class="wxqs">
+          <div class="wxqs-field">
+            <svg class="wxqs-glyph" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 13.8 13.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <span class="wxqs-text is-ph">搜索文档</span>
+          </div>
+        </div>
+        <div class="doc-side">
+          <div class="av-stack">
+            <span class="av c1">张</span><span class="av c2">李</span><span class="av c3">王</span>
+          </div>
+          <span class="doc-share">分享</span>
+        </div>
+      </div>
+      <div class="doc-page">
+        <p class="doc-p" style="margin-top:0">……节奏上，10 月完成灰度，11 月全量。数据口径以
+          <span class="doc-link-chip"><svg viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Q3 复盘：搜索使用率</span>
+          为准，视觉走查参照
+          <span class="doc-link-chip"><svg viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>设计规范 v3.0</span>
+          执行。
+        </p>
+        <div class="doc-quote">本周五前请各位把负责模块的风险项补到行动项表格里。</div>
+        <div class="doc-li">风险项写明负责人与 deadline，双周会逐项过</div>
+        <div class="refs-zone">
+          <svg class="ink-ring" viewBox="0 0 1000 260" preserveAspectRatio="none">
+            <ellipse cx="500" cy="130" rx="492" ry="122"/>
+          </svg>
+          <span class="ink-note">自动列出 ↑</span>
+          <div class="refs-footer">
+            <div>
+              <div class="refs-head"><span class="refs-head-t">本文关联文档（3）</span></div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">协作体验调研报告</span>
+                <span class="refs-meta">李四 · 昨天</span>
+              </div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">Q3 复盘：搜索使用率</span>
+                <span class="refs-meta">王五 · 3 天前</span>
+              </div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">设计规范 v3.0</span>
+                <span class="refs-meta">李四 · 本周</span>
+              </div>
+              <div class="refs-more">展示全部（还有 2 篇）</div>
+            </div>
+            <div>
+              <div class="refs-head"><span class="refs-head-t is-wander">You may also wander（3）</span></div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">新人上手指南</span>
+                <span class="refs-meta">张三 · 上周</span>
+              </div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">双周会纪要归档</span>
+                <span class="refs-meta">王五 · 9月18日</span>
+              </div>
+              <div class="refs-item">
+                <svg class="refs-ic" viewBox="0 0 14 14"><path d="M3.5 1.8h4.6l2.4 2.4v8H3.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.8v2.5h2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                <span class="refs-name">组件走查清单</span>
+                <span class="refs-meta">李四 · 9月15日</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
