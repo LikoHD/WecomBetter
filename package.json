@@ -2,7 +2,7 @@
   "name": "wecom-better",
   "private": true,
   "version": "1.0.4",
-  "description": "企微搭子 Chrome 插件",
+  "description": "WecomBetter 企微搭子",
   "scripts": {
     "build": "esbuild src/page-bridge.js --bundle --format=iife --platform=browser --outfile=dist/page-bridge.iife.js --legal-comments=none && esbuild src/content.js --bundle --format=iife --platform=browser --outfile=dist/content.iife.js --legal-comments=none"
   },
