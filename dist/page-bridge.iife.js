@@ -10,22 +10,27 @@
   var SEARCH_SETTINGS_ID = "wxdoc-quick-search-settings";
   var CREATE_PLUS_ID = "wxdoc-create-plus";
   var DOC_META_ROOT_ID = "wxdoc-doc-meta";
+  var MENTION_ROOT_ID = "wxdoc-mention-docs";
   var SILENT_PANEL_CLASS = "wxov-silent-panel";
   var POLL_MS = 1200;
   var DOC_HOST = "doc.weixin.qq.com";
   var DOC_PATH_RE = /^\/(doc|smartpage|sheet|smartsheet|slide|mind|flowchart)\/([^/?#]+)/i;
   var SNAPSHOT_EVENT = "wecom-better:snapshot";
   var HELLO_EVENT = "wecom-better:hello";
-  var CREATE_SMARTPAGE_EVENT = "wecom-better:create-smartpage";
-  var CREATE_SMARTPAGE_MSG = "create-smartpage";
   var WEB_LAYOUT_EVENT = "wecom-better:web-layout";
   var WEB_LAYOUT_TYPE = 8;
+  var MENTION_EVENT = "wecom-better:mention";
+  var INSERT_DOC_EVENT = "wecom-better:insert-doc";
+  var PICK_MENTION_EVENT = "wecom-better:pick-mention";
   function parseLabel(text) {
     const raw = String(text || "").replace(/\s+/g, " ").trim();
     if (!raw) return { id: "", name: "" };
     const matched = raw.match(/^(.+?)\((.+)\)$/);
     if (matched) return { id: matched[1].trim(), name: matched[2].trim() };
     return { id: raw, name: "" };
+  }
+  function cleanText(value) {
+    return String(value || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
   }
   function normalizeUser(user) {
     if (!user || typeof user !== "object") return null;
@@ -87,7 +92,6 @@
   var tickTimer = 0;
   var hooked = false;
   var hookedEditor = false;
-  var creatingSmartpage = false;
   var webLayoutEnabled = true;
   var webLayoutDocId = "";
   var webLayoutUntil = 0;
@@ -237,7 +241,7 @@
     }, 600);
   }
   function cleanRefTitle(title) {
-    const raw = String(title || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    const raw = cleanText(title);
     if (!raw || /^https?:\/\//i.test(raw)) return "";
     if (raw.length < 2) return "";
     if (/^[=+\-_|*•·@#/.\\]+$/.test(raw)) return "";
@@ -381,7 +385,7 @@
   function isOurOrChrome(el) {
     return Boolean(
       el.closest(
-        `#${REFS_ROOT_ID}, #${FOOTER_ROOT_ID}, #${WANDER_ROOT_ID}, #${SEARCH_ROOT_ID}, #${DOC_META_ROOT_ID}, .xd-web-header, .collab-list`
+        `#${REFS_ROOT_ID}, #${FOOTER_ROOT_ID}, #${WANDER_ROOT_ID}, #${SEARCH_ROOT_ID}, #${DOC_META_ROOT_ID}, #${MENTION_ROOT_ID}, .xd-web-header, .collab-list`
       )
     );
   }
@@ -553,14 +557,14 @@
   }
   function collectDocTitle() {
     const doc = document.getElementById("melo-doc-title");
-    const fromDoc = String(doc?.innerText || doc?.textContent || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    const fromDoc = cleanText(doc?.innerText || doc?.textContent);
     if (fromDoc) return fromDoc;
     const smart = document.querySelector(
       "#root-editable .sc-text-input-content, #sc-page-content .sc-text-input-content, #root-editable .textInput__pIjhc, #sc-page-content .textInput__pIjhc"
     );
-    const fromSmart = String(smart?.innerText || smart?.textContent || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    const fromSmart = cleanText(smart?.innerText || smart?.textContent);
     if (fromSmart) return fromSmart;
-    return String(document.title || "").replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "").replace(/\s+/g, " ").trim().replace(/\s*[-–—_|]\s*(腾讯文档|企业微信文档|企业微信|微信文档|WeCom|WeChat Work|Tencent Docs)\s*$/i, "").trim();
+    return cleanText(document.title).replace(/\s*[-–—_|]\s*(腾讯文档|企业微信文档|企业微信|微信文档|WeCom|WeChat Work|Tencent Docs)\s*$/i, "").trim();
   }
   function publish() {
     hookRuntimeUpdates();
@@ -594,24 +598,51 @@
   function textOf(el) {
     return String(el.innerText || el.textContent || "").replace(/\s+/g, "");
   }
+  function textContentOf(el) {
+    return String(el?.textContent || "").replace(/\s+/g, "");
+  }
   function isVisible(el) {
     const rect = el.getBoundingClientRect();
     const style = getComputedStyle(el);
     return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
   }
   function isOurUi(el) {
-    return Boolean(el.closest(`#${CREATE_PLUS_ID}, #wxdoc-titlebar-tools, #${REFS_ROOT_ID}, #wxdoc-online-viewers, #${SEARCH_ROOT_ID}, #${SEARCH_PANEL_ID}, #${SEARCH_SETTINGS_ID}, #${DOC_META_ROOT_ID}, #${FOOTER_ROOT_ID}, #${FOOTER_SPACE_ID}, #${WANDER_ROOT_ID}`));
+    return Boolean(el.closest(`#${CREATE_PLUS_ID}, #wxdoc-titlebar-tools, #${REFS_ROOT_ID}, #wxdoc-online-viewers, #${SEARCH_ROOT_ID}, #${SEARCH_PANEL_ID}, #${SEARCH_SETTINGS_ID}, #${DOC_META_ROOT_ID}, #${MENTION_ROOT_ID}, #${FOOTER_ROOT_ID}, #${FOOTER_SPACE_ID}, #${WANDER_ROOT_ID}`));
+  }
+  function reactHandler(el) {
+    const propsKey = Object.keys(el).find(function(name) {
+      return name.startsWith("__reactProps");
+    });
+    const props = propsKey ? el[propsKey] : null;
+    const direct = props && (props.onClick || props.onMouseDown || props.onPointerDown);
+    if (typeof direct === "function") return direct;
+    const fiberKey = Object.keys(el).find(function(name) {
+      return name.startsWith("__reactFiber") || name.startsWith("__reactInternalInstance");
+    });
+    let fiber = fiberKey ? el[fiberKey] : null;
+    for (let i = 0; fiber && i < 6; i += 1) {
+      const memo = fiber.memoizedProps || fiber.pendingProps;
+      const handler = memo && (memo.onClick || memo.onMouseDown || memo.onPointerDown);
+      if (typeof handler === "function") return handler;
+      fiber = fiber.return;
+    }
+    return null;
   }
   function clickNative(el) {
     if (!el) return false;
-    const key = Object.keys(el).find(function(name) {
-      return name.startsWith("__reactProps") || name.startsWith("__reactFiber") || name.startsWith("__reactInternalInstance");
-    });
-    if (key && key.startsWith("__reactProps") && typeof el[key]?.onClick === "function") {
+    const handler = reactHandler(el);
+    if (handler) {
       try {
-        el[key].onClick({ preventDefault() {
-        }, stopPropagation() {
-        }, nativeEvent: { isTrusted: true } });
+        handler({
+          preventDefault() {
+          },
+          stopPropagation() {
+          },
+          target: el,
+          currentTarget: el,
+          button: 0,
+          nativeEvent: { isTrusted: true, target: el }
+        });
         return true;
       } catch {
       }
@@ -639,48 +670,6 @@
     }
     return best;
   }
-  function activateCreateItem(el) {
-    if (!el) return false;
-    if (el.href && /doc\.weixin\.qq\.com/.test(el.href)) {
-      location.assign(el.href);
-      return true;
-    }
-    return clickNative(el);
-  }
-  function onCreateSmartpage() {
-    if (creatingSmartpage) return;
-    creatingSmartpage = true;
-    const plus = document.getElementById(CREATE_PLUS_ID);
-    if (plus) plus.setAttribute("aria-busy", "true");
-    function done() {
-      creatingSmartpage = false;
-      if (plus) plus.removeAttribute("aria-busy");
-    }
-    const visibleItem = findByExactText("\u65B0\u5EFA\u667A\u80FD\u6587\u6863");
-    if (visibleItem) {
-      activateCreateItem(visibleItem);
-      done();
-      return;
-    }
-    const hiddenItem = findByExactText("\u65B0\u5EFA\u667A\u80FD\u6587\u6863", { allowHidden: true });
-    if (hiddenItem) {
-      activateCreateItem(hiddenItem);
-      done();
-      return;
-    }
-    const neu = findByExactText("\u65B0\u5EFA", { leftOnly: true });
-    if (neu) clickNative(neu);
-    window.setTimeout(function() {
-      activateCreateItem(findByExactText("\u65B0\u5EFA\u667A\u80FD\u6587\u6863", { allowHidden: true }));
-      done();
-    }, 180);
-  }
-  function onCreateMessage(event) {
-    if (event.source !== window) return;
-    const data = event.data;
-    if (!data || data.source !== MSG_SOURCE || data.type !== CREATE_SMARTPAGE_MSG) return;
-    onCreateSmartpage();
-  }
   function hookHistory() {
     ["pushState", "replaceState"].forEach(function(name) {
       const raw = history[name];
@@ -695,11 +684,360 @@
     });
     window.addEventListener("popstate", schedulePublish);
   }
+  var MENTION_QUERY_RE = /@([^\s@]{0,40})$/;
+  var mentionActive = false;
+  var mentionTimer = 0;
+  var savedMention = null;
+  var forgetMentionTimer = 0;
+  function rectOf(rect) {
+    if (!rect) return null;
+    return {
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height
+    };
+  }
+  function mentionFromText(node, offset) {
+    if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+    const host = node.parentElement?.closest(
+      "#zoomable-container, #root-editable, #sc-page-content, #melo-container, .surface, [contenteditable='true']"
+    );
+    if (!host || isOurUi(host)) return null;
+    const before = node.data.slice(0, offset);
+    const matched = before.match(MENTION_QUERY_RE);
+    if (!matched) return null;
+    const caretRange = document.createRange();
+    caretRange.setStart(node, offset);
+    caretRange.setEnd(node, offset);
+    return {
+      query: matched[1],
+      node,
+      start: offset - matched[0].length,
+      end: offset,
+      caret: rectOf(caretRange.getBoundingClientRect())
+    };
+  }
+  function readMentionFromSelection() {
+    const sel = document.getSelection();
+    if (!sel || !sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) return mentionFromText(node, range.startOffset);
+    if (node.nodeType === 1 && range.startOffset > 0) {
+      const prev = node.childNodes[range.startOffset - 1];
+      if (prev && prev.nodeType === Node.TEXT_NODE) return mentionFromText(prev, prev.data.length);
+    }
+    return null;
+  }
+  function nativeMentionPanel() {
+    const panels = document.querySelectorAll(".od_editor_atPopPanel");
+    for (let i = 0; i < panels.length; i += 1) {
+      const panel = panels[i];
+      if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
+    }
+    return panels[0] || null;
+  }
+  function dispatchMention(detail) {
+    document.dispatchEvent(
+      new CustomEvent(MENTION_EVENT, {
+        bubbles: true,
+        detail: { source: MSG_SOURCE, ...detail }
+      })
+    );
+  }
+  function rememberMention(hit) {
+    window.clearTimeout(forgetMentionTimer);
+    if (!hit?.node) return;
+    savedMention = {
+      node: hit.node,
+      start: hit.start,
+      text: hit.node.data.slice(hit.start, hit.end)
+    };
+  }
+  function mentionTarget() {
+    const live = captureMention();
+    if (live) return live;
+    if (savedMention?.node?.isConnected) return savedMention;
+    return null;
+  }
+  function focusSelectionHost() {
+    const sel = document.getSelection();
+    const node = sel && sel.anchorNode;
+    const el = node && (node.nodeType === 1 ? node : node.parentElement);
+    const host = el && el.closest("[contenteditable='true']");
+    if (host && document.activeElement !== host) {
+      try {
+        host.focus({ preventScroll: true });
+      } catch {
+        host.focus();
+      }
+    }
+  }
+  function publishMention() {
+    const path = parseDocPath(location.pathname);
+    const onDoc = path && (path.kind === "doc" || path.kind === "smartpage");
+    const hit = onDoc ? readMentionFromSelection() : null;
+    if (!hit) {
+      if (!mentionActive) return;
+      mentionActive = false;
+      dispatchMention({ active: false });
+      forgetMentionTimer = window.setTimeout(function() {
+        savedMention = null;
+      }, 1e3);
+      return;
+    }
+    rememberMention(hit);
+    mentionActive = true;
+    dispatchMention({
+      active: true,
+      query: hit.query,
+      caret: hit.caret
+    });
+  }
+  function onPickMention(event) {
+    const detail = event.detail;
+    if (!detail || detail.source !== MSG_SOURCE) return;
+    const panel = nativeMentionPanel();
+    if (!panel) return;
+    const kind = String(detail.kind || "");
+    const label = String(detail.label || "").replace(/\s+/g, "");
+    let target = null;
+    if (kind === "more") target = panel.querySelector(".od_editor_atPopPanel_more");
+    else {
+      const items = panel.querySelectorAll(".od_editor_atPopPanel_item");
+      for (let i = 0; i < items.length; i += 1) {
+        const text = textContentOf(items[i].querySelector(".od_editor_atPopPanel_item_text") || items[i]);
+        if (text === label) {
+          target = items[i];
+          break;
+        }
+      }
+    }
+    if (!target) return;
+    const typed = mentionTarget();
+    if (typed) {
+      const located = locateCaptured(typed);
+      if (located) selectLocated(located, true);
+      focusSelectionHost();
+      if (located) selectLocated(located, true);
+    }
+    panel.style.setProperty("opacity", "1", "important");
+    panel.style.setProperty("pointer-events", "auto", "important");
+    try {
+      clickNative(target);
+    } finally {
+      panel.style.setProperty("opacity", "0", "important");
+      panel.style.setProperty("pointer-events", "none", "important");
+    }
+    mentionActive = false;
+    dispatchMention({ active: false });
+    if (kind === "more" || !typed) return;
+    window.setTimeout(function() {
+      deleteCapturedMention(typed);
+    }, 80);
+  }
+  function scheduleMention() {
+    if (mentionTimer) return;
+    mentionTimer = window.setTimeout(function() {
+      mentionTimer = 0;
+      publishMention();
+    }, 16);
+  }
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function(ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+  function captureMention() {
+    const hit = readMentionFromSelection();
+    if (!hit) return null;
+    return {
+      node: hit.node,
+      start: hit.start,
+      text: hit.node.data.slice(hit.start, hit.end)
+    };
+  }
+  function locateCaptured(captured) {
+    if (!captured?.node?.isConnected || !captured.text) return null;
+    const data = captured.node.data;
+    let from = 0;
+    let best = -1;
+    while (from <= data.length) {
+      const at = data.indexOf(captured.text, from);
+      if (at < 0) break;
+      if (best < 0 || Math.abs(at - captured.start) < Math.abs(best - captured.start)) best = at;
+      from = at + 1;
+    }
+    if (best < 0) return null;
+    return { node: captured.node, start: best, end: best + captured.text.length };
+  }
+  function selectLocated(located, collapseEnd) {
+    const range = document.createRange();
+    range.setStart(located.node, collapseEnd ? located.end : located.start);
+    range.setEnd(located.node, located.end);
+    const sel = document.getSelection();
+    if (!sel) return null;
+    sel.removeAllRanges();
+    sel.addRange(range);
+    return range;
+  }
+  function leftoverMention(captured) {
+    const full = locateCaptured(captured);
+    if (full) return full;
+    const node = captured.node;
+    if (!node?.isConnected || !captured.text) return null;
+    const data = node.data;
+    const start = captured.start;
+    if (start < 0 || start >= data.length || data.charAt(start) !== "@") return null;
+    let len = 0;
+    const max = Math.min(captured.text.length, data.length - start);
+    while (len < max && data.charAt(start + len) === captured.text.charAt(len)) len += 1;
+    if (!len) return null;
+    return { node, start, end: start + len };
+  }
+  function editorHost(node) {
+    const host = node?.parentElement;
+    if (host && editorLike(host)) return host;
+    return host || document.body;
+  }
+  function deleteCapturedMention(captured) {
+    if (!captured) return false;
+    for (let guard = 0; guard < captured.text.length + 2; guard += 1) {
+      const located = leftoverMention(captured);
+      if (!located) return true;
+      const target = editorHost(located.node);
+      selectLocated(located, false);
+      let handled = false;
+      try {
+        handled = target.dispatchEvent(
+          new InputEvent("beforeinput", {
+            bubbles: true,
+            cancelable: true,
+            inputType: located.end - located.start > 1 ? "deleteByCut" : "deleteContentBackward"
+          })
+        ) === false;
+      } catch {
+        handled = false;
+      }
+      if (!leftoverMention(captured)) return true;
+      if (!handled) {
+        try {
+          document.execCommand("delete");
+        } catch {
+        }
+      }
+      if (!leftoverMention(captured)) return true;
+      try {
+        document.execCommand("insertText", false, "");
+      } catch {
+      }
+      if (!leftoverMention(captured)) return true;
+      selectLocated(located, true);
+      try {
+        handled = target.dispatchEvent(
+          new InputEvent("beforeinput", {
+            bubbles: true,
+            cancelable: true,
+            inputType: "deleteContentBackward"
+          })
+        ) === false;
+      } catch {
+        handled = false;
+      }
+      if (!handled) {
+        try {
+          document.execCommand("delete");
+        } catch {
+        }
+      }
+      if (leftoverMention(captured)?.end === located.end && leftoverMention(captured)?.start === located.start) break;
+    }
+    const left = leftoverMention(captured);
+    if (left) {
+      const at = left.start;
+      left.node.deleteData(left.start, left.end - left.start);
+      selectLocated({ node: left.node, start: at, end: at }, true);
+    }
+    return !leftoverMention(captured);
+  }
+  function pasteTarget() {
+    const sel = document.getSelection();
+    const node = sel && sel.anchorNode;
+    const el = node && (node.nodeType === 1 ? node : node.parentElement);
+    if (el && editorLike(el)) return el;
+    const active = document.activeElement;
+    if (active && active.nodeType === 1 && editorLike(active)) return active;
+    return el || document.body;
+  }
+  function editorLike(el) {
+    return Boolean(
+      el.closest("#zoomable-container, #root-editable, #sc-page-content, #melo-container, .surface, [contenteditable='true']")
+    );
+  }
+  function pasteDocLink(url, title) {
+    const data = new DataTransfer();
+    data.setData("text/plain", url);
+    data.setData("text/html", `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`);
+    let event;
+    try {
+      event = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: data });
+    } catch {
+      event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+    }
+    if (!event.clipboardData) {
+      try {
+        Object.defineProperty(event, "clipboardData", { value: data });
+      } catch {
+        return false;
+      }
+    }
+    if (!event.clipboardData) return false;
+    const target = pasteTarget();
+    const handled = target.dispatchEvent(event) === false;
+    return handled;
+  }
+  function commandInsert(text) {
+    try {
+      return document.execCommand("insertText", false, text);
+    } catch {
+      return false;
+    }
+  }
+  function onInsertDoc(event) {
+    const detail = event.detail;
+    if (!detail || detail.source !== MSG_SOURCE) return;
+    const url = String(detail.url || "").trim();
+    const title = String(detail.title || "").trim();
+    if (!parseDocUrl(url)) return;
+    const typed = mentionTarget();
+    if (typed) {
+      const located = locateCaptured(typed);
+      if (located) selectLocated(located, false);
+      focusSelectionHost();
+      if (located) selectLocated(located, false);
+      deleteCapturedMention(typed);
+    }
+    const pasted = pasteDocLink(url, title);
+    if (!pasted) commandInsert(url);
+    if (typed) deleteCapturedMention(typed);
+    savedMention = null;
+    mentionActive = false;
+    dispatchMention({ active: false });
+  }
   window.__WECOM_BETTER__ = "1.0.4";
   document.addEventListener(HELLO_EVENT, publish);
-  document.addEventListener(CREATE_SMARTPAGE_EVENT, onCreateSmartpage);
   document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
-  window.addEventListener("message", onCreateMessage);
+  document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
+  document.addEventListener(PICK_MENTION_EVENT, onPickMention);
+  document.addEventListener("selectionchange", scheduleMention);
+  document.addEventListener("keyup", scheduleMention, true);
+  document.addEventListener("input", scheduleMention, true);
+  document.addEventListener("compositionend", scheduleMention, true);
+  window.addEventListener("scroll", scheduleMention, true);
+  window.addEventListener("resize", scheduleMention);
   hookHistory();
   publish();
   window.setTimeout(primeViewersIfNeeded, 800);

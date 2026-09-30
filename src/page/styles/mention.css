@@ -1,0 +1,229 @@
+/* 功能开着时原生 @ 框一直不画出来。opacity 而不是 display:none，成员列表仍会排版，名字读得到。 */
+html.wxmd-mention-on .od_editor_atPopPanel {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+#wxdoc-mention-docs {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 100000;
+  width: 320px;
+  max-height: min(480px, calc(100vh - 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2329;
+  box-shadow: 0 8px 28px rgba(31, 35, 41, 0.12), 0 0 1px rgba(31, 35, 41, 0.16);
+  font: 13px/20px -apple-system, system-ui, "Segoe UI", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: left top;
+}
+
+/* 和文档里点加号后的菜单一样：从锚点缩放淡入，缓动用企微常用的减速曲线。 */
+#wxdoc-mention-docs.is-in,
+#wxdoc-mention-docs.is-in .wxmd-item {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#wxdoc-mention-docs.is-in {
+  animation: wxmd-mention-in 200ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+#wxdoc-mention-docs.is-out {
+  visibility: visible;
+  pointer-events: none;
+  animation: wxmd-mention-out 140ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes wxmd-mention-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wxmd-mention-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #wxdoc-mention-docs.is-in,
+  #wxdoc-mention-docs.is-out {
+    animation: none;
+  }
+
+  #wxdoc-mention-docs.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#wxdoc-mention-docs .wxmd-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 6px;
+}
+
+#wxdoc-mention-docs .wxmd-head[hidden] {
+  display: none;
+}
+
+#wxdoc-mention-docs .wxmd-title {
+  color: rgba(23, 26, 29, 0.6);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+#wxdoc-mention-docs .wxmd-hint {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(23, 26, 29, 0.4);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#wxdoc-mention-docs .wxmd-list {
+  min-height: 36px;
+  max-height: 400px;
+  overflow: auto;
+  overflow-anchor: none;
+  padding: 4px 4px 4px;
+}
+
+#wxdoc-mention-docs .wxmd-hold {
+  pointer-events: none;
+}
+
+#wxdoc-mention-docs .wxmd-section {
+  padding: 8px 8px 2px;
+  color: rgba(23, 26, 29, 0.45);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+#wxdoc-mention-docs .wxmd-avatar {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(38, 126, 240, 0.12);
+  color: #267ef0;
+}
+
+#wxdoc-mention-docs .wxmd-avatar img {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  display: block;
+}
+
+#wxdoc-mention-docs .wxmd-glyph {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+#wxdoc-mention-docs .wxmd-item.is-more {
+  color: rgba(23, 26, 29, 0.7);
+}
+
+#wxdoc-mention-docs .wxmd-empty {
+  padding: 16px 12px;
+  color: rgba(23, 26, 29, 0.4);
+  text-align: center;
+}
+
+#wxdoc-mention-docs .wxmd-item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#wxdoc-mention-docs .wxmd-item.is-active,
+#wxdoc-mention-docs .wxmd-item:hover {
+  background: rgba(6, 15, 26, 0.05);
+}
+
+#wxdoc-mention-docs .wxmd-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+#wxdoc-mention-docs .wxmd-icon .wxqs-file-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+#wxdoc-mention-docs .wxmd-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#wxdoc-mention-docs .wxmd-name {
+  overflow: hidden;
+  color: #1f2329;
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#wxdoc-mention-docs .wxmd-meta {
+  overflow: hidden;
+  color: rgba(23, 26, 29, 0.4);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#wxdoc-mention-docs .wxmd-foot {
+  padding: 6px 12px 8px;
+  border-top: 1px solid rgba(6, 15, 26, 0.06);
+  color: rgba(23, 26, 29, 0.4);
+  font-size: 12px;
+  line-height: 16px;
+}

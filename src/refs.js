@@ -1,5 +1,5 @@
 import { asMs, currentDocId, enrichDocStats, formatDocDate } from "./search.js";
-import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_MAX_VISIBLE, REFS_ROOT_ID, WANDER_ROOT_ID, isOwnDoc, parseDocPath } from "./shared.js";
+import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_MAX_VISIBLE, REFS_ROOT_ID, WANDER_ROOT_ID, cleanText, isOwnDoc, parseDocPath } from "./shared.js";
 
 const ICONS = {
   smartpage:
@@ -92,10 +92,7 @@ function findCanvas(host) {
 }
 
 function blockText(el) {
-  return String(el?.textContent || "")
-    .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return cleanText(el?.textContent);
 }
 
 function isTitleOnlyLabel(text) {

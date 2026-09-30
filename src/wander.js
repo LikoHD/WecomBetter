@@ -1,6 +1,6 @@
 import { ensureFooter, paintWanderCol, placeFooter, syncFooterEmpty } from "./refs.js";
 import { currentDocId, enrichDocStats, getDocMemberCount, hydrateDocStats, searchDocs } from "./search.js";
-import { FOOTER_ROOT_ID, FOOTER_SPACE_ID, REFS_ROOT_ID, WANDER_ROOT_ID, isOwnDoc, parseDocUrl } from "./shared.js";
+import { WANDER_ROOT_ID, cleanText, isOwnDoc, parseDocUrl } from "./shared.js";
 
 const KEYWORD_POOL = 15;
 const KEYWORD_COUNT_MIN = 2;
@@ -63,15 +63,8 @@ const ui = {
   paintSig: "",
 };
 
-function cleanTitle(value) {
-  return String(value || "")
-    .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function stripSiteSuffix(title) {
-  return cleanTitle(title)
+  return cleanText(title)
     .replace(
       /\s*[-–—_|]\s*(腾讯文档|企业微信文档|企业微信|微信文档|WeCom|WeChat Work|Tencent Docs)\s*$/i,
       ""
@@ -81,12 +74,12 @@ function stripSiteSuffix(title) {
 
 function readDomTitle() {
   const doc = document.getElementById("melo-doc-title");
-  const fromDoc = cleanTitle(doc && (doc.innerText || doc.textContent));
+  const fromDoc = cleanText(doc && (doc.innerText || doc.textContent));
   if (fromDoc) return fromDoc;
   const smart = document.querySelector(
     "#root-editable .sc-text-input-content, #sc-page-content .sc-text-input-content, #root-editable .textInput__pIjhc, #sc-page-content .textInput__pIjhc"
   );
-  const fromSmart = cleanTitle(smart && (smart.innerText || smart.textContent));
+  const fromSmart = cleanText(smart && (smart.innerText || smart.textContent));
   if (fromSmart) return fromSmart;
   return stripSiteSuffix(document.title);
 }
@@ -117,7 +110,7 @@ function tokenizeFallback(text) {
 }
 
 function tokenize(title) {
-  const text = cleanTitle(title);
+  const text = cleanText(title);
   if (!text) return [];
   if (typeof Intl !== "undefined" && Intl.Segmenter) {
     const tokens = [];
@@ -538,7 +531,7 @@ export function unmountWander() {
 export function mountWander(opts) {
   const refs = Array.isArray(opts?.refs) ? opts.refs : [];
   const docMeta = opts?.docMeta && typeof opts.docMeta === "object" ? opts.docMeta : null;
-  const docTitle = cleanTitle(opts?.docTitle) || readDomTitle();
+  const docTitle = cleanText(opts?.docTitle) || readDomTitle();
   ui.refs = refs;
   ui.docMeta = docMeta;
   ui.docTitle = docTitle;

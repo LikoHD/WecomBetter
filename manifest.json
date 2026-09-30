@@ -59,7 +59,8 @@
         "src/page/styles/wander.css",
         "src/page/styles/toolbar.css",
         "src/page/styles/search.css",
-        "src/page/styles/doc-meta.css"
+        "src/page/styles/doc-meta.css",
+        "src/page/styles/mention.css"
       ],
       "run_at": "document_start",
       "world": "ISOLATED"

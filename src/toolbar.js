@@ -13,6 +13,9 @@ import {
   isDocDetailPage,
   moveBefore,
   parseDocPath,
+  postForm,
+  requestOk,
+  unwrapBody,
 } from "./shared.js";
 
 const PLUS_ICON =
@@ -24,44 +27,6 @@ let creating = false;
 
 function currentKind() {
   return parseDocPath(location.pathname)?.kind || "";
-}
-
-function cookieSid() {
-  const matched = document.cookie.match(/(?:^|;\s*)(?:wedoc_sid|wedrive_sid|tdoc_sid)=([^;]+)/);
-  return matched ? matched[1] : "";
-}
-
-function unwrapBody(data) {
-  if (data && data.body && typeof data.body === "object") return data.body;
-  return data || {};
-}
-
-function requestOk(data) {
-  const ret = data?.head?.ret;
-  return ret === 0 || ret == null;
-}
-
-async function postForm(path, fields) {
-  const query = new URLSearchParams();
-  const sid = cookieSid();
-  if (sid) query.set("sid", sid);
-  query.set("wedoc_xsrf", "1");
-  const body = new URLSearchParams();
-  for (const [key, value] of Object.entries(fields)) {
-    if (value == null) continue;
-    body.set(key, String(value));
-  }
-  const res = await fetch(`${path}?${query}`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-  if (!res.ok) throw new Error(`create ${res.status}`);
-  return res.json();
 }
 
 function pickCreateUrl(data) {

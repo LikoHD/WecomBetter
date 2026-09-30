@@ -12,6 +12,7 @@ import {
   shouldHideDocFooter,
   unmountRefs,
 } from "./refs.js";
+import { installMentionPointerGuard, mountMention, setMentionGuard, unmountMention } from "./mention.js";
 import { mountSearch, unmountSearch } from "./search.js";
 import {
   DEFAULT_FEATURES,
@@ -22,6 +23,7 @@ import {
   MSG_SOURCE,
   REFS_ROOT_ID,
   SEARCH_PANEL_ID,
+  MENTION_ROOT_ID,
   SEARCH_ROOT_ID,
   SEARCH_SETTINGS_ID,
   SNAPSHOT_EVENT,
@@ -30,12 +32,14 @@ import {
   extensionAlive,
   isDocDetailPage,
   isHomePage,
-  isRefDocsPage,
   readFeatures,
 } from "./shared.js";
 import { renderToolbar, unmountToolbar } from "./toolbar.js";
 import { renderViewers, unmountViewers } from "./viewers.js";
 import { mountWander, unmountWander } from "./wander.js";
+
+setMentionGuard(true);
+installMentionPointerGuard();
 
 let features = { ...DEFAULT_FEATURES };
 let last = {
@@ -91,10 +95,11 @@ function apply() {
     unmountToolbar();
     if (features.search !== false) mountSearch();
     else unmountSearch();
+    unmountMention();
     return;
   }
 
-  if (features.create !== false && isRefDocsPage()) {
+  if (features.create !== false && isDocDetailPage()) {
     renderToolbar();
   } else {
     unmountToolbar();
@@ -106,13 +111,19 @@ function apply() {
     unmountSearch();
   }
 
+  if (features.mention !== false && isDocDetailPage()) {
+    mountMention();
+  } else {
+    unmountMention();
+  }
+
   if (features.viewers !== false) {
     renderViewers(last.viewers, last.total);
   } else {
     unmountViewers();
   }
 
-  const onDoc = isRefDocsPage() || isDocDetailPage();
+  const onDoc = isDocDetailPage();
   const hideBox = shouldHideDocFooter(last.docMeta) || isFooterDismissed();
   const footerReady = onDoc && !hideBox && pageContentReady();
 
@@ -126,9 +137,9 @@ function apply() {
     unmountWander();
   }
 
-  if (features.refs !== false && isRefDocsPage() && footerReady) {
+  if (features.refs !== false && isDocDetailPage() && footerReady) {
     renderRefDocs(last.refs);
-  } else if (!isRefDocsPage() || hideBox) {
+  } else if (!isDocDetailPage() || hideBox) {
     unmountRefs();
     hideFooter();
   } else {
@@ -245,7 +256,7 @@ async function startApp() {
       if (!el || el.nodeType !== 1) return true;
       return Boolean(
         el.closest(
-          `#${FOOTER_ROOT_ID}, #${FOOTER_SPACE_ID}, #${REFS_ROOT_ID}, #${WANDER_ROOT_ID}, #${SEARCH_ROOT_ID}, #${DOC_META_ROOT_ID}, #wxdoc-online-viewers, #wxdoc-titlebar-tools, #wxdoc-create-plus, #${SEARCH_PANEL_ID}, #${SEARCH_SETTINGS_ID}`
+          `#${FOOTER_ROOT_ID}, #${FOOTER_SPACE_ID}, #${REFS_ROOT_ID}, #${WANDER_ROOT_ID}, #${SEARCH_ROOT_ID}, #${DOC_META_ROOT_ID}, #${MENTION_ROOT_ID}, #wxdoc-online-viewers, #wxdoc-titlebar-tools, #wxdoc-create-plus, #${SEARCH_PANEL_ID}, #${SEARCH_SETTINGS_ID}`
         )
       );
     }

@@ -4,6 +4,7 @@ import {
   SEARCH_ROOT_ID,
   SEARCH_SETTINGS_ID,
   TITLEBAR_TOOLS_ID,
+  cleanText,
   extensionAlive,
   findHomeSearchAnchor,
   findToolsAnchor,
@@ -11,8 +12,12 @@ import {
   moveBefore,
   parseDocPath,
   parseDocUrl,
+  postForm,
+  postJson,
+  requestOk,
   storageGet,
   storageSet,
+  unwrapBody,
 } from "./shared.js";
 
 const SEARCH_TYPES = ["8", "9", "101", "102", "103", "104", "105", "106", "107", "108"];
@@ -98,59 +103,6 @@ const ui = {
   loading: false,
   error: "",
 };
-
-function cookieSid() {
-  const matched = document.cookie.match(/(?:^|;\s*)(?:wedoc_sid|wedrive_sid|tdoc_sid)=([^;]+)/);
-  return matched ? matched[1] : "";
-}
-
-function unwrapBody(data) {
-  if (data && data.body && typeof data.body === "object") return data.body;
-  return data || {};
-}
-
-function requestOk(data) {
-  const ret = data?.head?.ret;
-  return ret === 0 || ret === "0" || ret == null;
-}
-
-function cgiQuery() {
-  const query = new URLSearchParams();
-  const sid = cookieSid();
-  if (sid) query.set("sid", sid);
-  query.set("wedoc_xsrf", "1");
-  return query;
-}
-
-function encodeForm(fields) {
-  const body = new URLSearchParams();
-  for (const [key, value] of Object.entries(fields || {})) {
-    if (Array.isArray(value)) value.forEach(function (item) {
-      body.append(key, String(item));
-    });
-    else body.set(key, String(value ?? ""));
-  }
-  return body;
-}
-
-async function cgiPost(path, body, contentType) {
-  const res = await fetch(`${path}?${cgiQuery()}`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": contentType },
-    body,
-  });
-  if (!res.ok) throw new Error(`cgi ${res.status}`);
-  return res.json();
-}
-
-export function postForm(path, fields) {
-  return cgiPost(path, encodeForm(fields), "application/x-www-form-urlencoded");
-}
-
-export function postJson(path, fields) {
-  return cgiPost(path, JSON.stringify(fields || {}), "application/json;charset=utf-8");
-}
 
 export function asMs(value) {
   const n = Number(value) || 0;
@@ -306,7 +258,7 @@ function rememberItem(item, store) {
   return changed;
 }
 
-export function normalizeFile(file) {
+function normalizeFile(file) {
   if (!file || typeof file !== "object") return null;
   if (file.file_status != null && Number(file.file_status) !== 1) return null;
   const url = String(file.doc_url || "").trim();
@@ -317,10 +269,7 @@ export function normalizeFile(file) {
     (/\/forms\//i.test(url) ? "collect" : "") ||
     FILE_TYPE_KIND[Number(file.file_type)] ||
     "doc";
-  const title = String(file.name || "")
-    .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const title = cleanText(file.name);
   const snippet = stripHl(file.search_body_hl && file.search_body_hl[0]);
   return {
     id: String(file.doc_id || file.file_id || url),
@@ -349,7 +298,7 @@ export function currentDocId() {
   return parseDocPath(location.pathname)?.id || "";
 }
 
-export function takeFiles(list, limit) {
+function takeFiles(list, limit) {
   const self = currentDocId();
   const seen = new Set();
   const out = [];
@@ -612,10 +561,18 @@ async function writeScope(partial) {
   return next;
 }
 
-async function recentDocs() {
+export function fileIcon(kind) {
+  return FILE_ICONS[kind] || FILE_ICONS.doc;
+}
+
+export async function fetchRecentDocs(limit) {
   const data = await postForm("/diskfile/newfilemgr", { func: "22" });
   if (!requestOk(data)) throw new Error(data?.head?.msg || "recent failed");
-  return takeFiles(unwrapBody(data).files, RECENT_LIMIT);
+  return takeFiles(unwrapBody(data).files, limit || RECENT_LIMIT);
+}
+
+async function recentDocs() {
+  return fetchRecentDocs(RECENT_LIMIT);
 }
 
 async function readHistory() {
@@ -1314,8 +1271,6 @@ function ensureRoot() {
       `<input class="wxqs-input" type="search" maxlength="${KEYWORD_MAX}" placeholder="搜索" autocomplete="off" spellcheck="false" enterkeyhint="search" />` +
       `<button class="wxqs-clear" type="button" hidden aria-label="清除">${CLEAR_ICON}</button>` +
       `</div>`;
-  } else {
-    root.querySelector(".wxqs-menu")?.remove();
   }
   placeRoot(root);
   bindOnce(root);

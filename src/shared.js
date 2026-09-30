@@ -11,6 +11,7 @@ export const SEARCH_SETTINGS_ID = "wxdoc-quick-search-settings";
 export const CREATE_PLUS_ID = "wxdoc-create-plus";
 export const TITLEBAR_TOOLS_ID = "wxdoc-titlebar-tools";
 export const DOC_META_ROOT_ID = "wxdoc-doc-meta";
+export const MENTION_ROOT_ID = "wxdoc-mention-docs";
 export const FLOAT_LAYER_ID = "wxov-float-layer";
 export const SILENT_PANEL_CLASS = "wxov-silent-panel";
 
@@ -29,6 +30,7 @@ export const FEATURE_IDS = {
   docMeta: "docMeta",
   webLayout: "webLayout",
   create: "create",
+  mention: "mention",
 };
 
 export const DEFAULT_FEATURES = {
@@ -38,14 +40,16 @@ export const DEFAULT_FEATURES = {
   docMeta: true,
   webLayout: true,
   create: true,
+  mention: true,
 };
 
 export const SNAPSHOT_EVENT = "wecom-better:snapshot";
 export const HELLO_EVENT = "wecom-better:hello";
-export const CREATE_SMARTPAGE_EVENT = "wecom-better:create-smartpage";
-export const CREATE_SMARTPAGE_MSG = "create-smartpage";
 export const WEB_LAYOUT_EVENT = "wecom-better:web-layout";
 export const WEB_LAYOUT_TYPE = 8;
+export const MENTION_EVENT = "wecom-better:mention";
+export const INSERT_DOC_EVENT = "wecom-better:insert-doc";
+export const PICK_MENTION_EVENT = "wecom-better:pick-mention";
 
 export function parseLabel(text) {
   const raw = String(text || "").replace(/\s+/g, " ").trim();
@@ -53,6 +57,13 @@ export function parseLabel(text) {
   const matched = raw.match(/^(.+?)\((.+)\)$/);
   if (matched) return { id: matched[1].trim(), name: matched[2].trim() };
   return { id: raw, name: "" };
+}
+
+export function cleanText(value) {
+  return String(value || "")
+    .replace(/[\u200b\u200c\u200d\u2060\ufeff]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeUser(user) {
@@ -131,10 +142,6 @@ export function findHomeSearchAnchor() {
   return { host: header, before: null };
 }
 
-export function isRefDocsPage(pathname = location.pathname) {
-  return isDocDetailPage(pathname);
-}
-
 export function findVisibleCollabButton() {
   const buttons = [...document.querySelectorAll(".ent-collab-users")];
   return buttons.find((el) => el.offsetParent !== null) || buttons[0] || null;
@@ -197,6 +204,59 @@ export async function storageSet(area, values) {
   } catch {
     return false;
   }
+}
+
+export function cookieSid() {
+  const matched = document.cookie.match(/(?:^|;\s*)(?:wedoc_sid|wedrive_sid|tdoc_sid)=([^;]+)/);
+  return matched ? matched[1] : "";
+}
+
+export function unwrapBody(data) {
+  if (data && data.body && typeof data.body === "object") return data.body;
+  return data || {};
+}
+
+export function requestOk(data) {
+  const ret = data?.head?.ret;
+  return ret === 0 || ret === "0" || ret == null;
+}
+
+function cgiQuery() {
+  const query = new URLSearchParams();
+  const sid = cookieSid();
+  if (sid) query.set("sid", sid);
+  query.set("wedoc_xsrf", "1");
+  return query;
+}
+
+function encodeForm(fields) {
+  const body = new URLSearchParams();
+  for (const [key, value] of Object.entries(fields || {})) {
+    if (Array.isArray(value)) value.forEach(function (item) {
+      body.append(key, String(item));
+    });
+    else body.set(key, String(value ?? ""));
+  }
+  return body;
+}
+
+async function cgiPost(path, body, contentType) {
+  const res = await fetch(`${path}?${cgiQuery()}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": contentType },
+    body,
+  });
+  if (!res.ok) throw new Error(`cgi ${res.status}`);
+  return res.json();
+}
+
+export function postForm(path, fields) {
+  return cgiPost(path, encodeForm(fields), "application/x-www-form-urlencoded");
+}
+
+export function postJson(path, fields) {
+  return cgiPost(path, JSON.stringify(fields || {}), "application/json;charset=utf-8");
 }
 
 export async function copyText(text) {

@@ -7,6 +7,7 @@ const toggles = {
   [FEATURE_IDS.docMeta]: document.getElementById("toggle-doc-meta"),
   [FEATURE_IDS.webLayout]: document.getElementById("toggle-web-layout"),
   [FEATURE_IDS.create]: document.getElementById("toggle-create"),
+  [FEATURE_IDS.mention]: document.getElementById("toggle-mention"),
 };
 
 function paint(features) {
@@ -22,6 +23,9 @@ async function persist() {
   }
   paint(await writeFeatures(next));
 }
+
+const ver = document.querySelector(".ver");
+if (ver) ver.textContent = chrome.runtime.getManifest().version;
 
 const features = await readFeatures();
 paint(features);
