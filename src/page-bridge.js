@@ -27,6 +27,8 @@ import {
   cleanText,
   findVisibleCollabButton,
   isOwnDoc,
+  isDocDetailPage,
+  nativeMentionPanel,
   parseDocPath,
   parseDocUrl,
   parseLabel,
@@ -478,7 +480,7 @@ function isWebLayoutNow() {
 }
 
 function clickWebLayoutMenu() {
-  const item = findByExactText("Web版式", { allowHidden: true });
+  const item = findByExactText("Web版式");
   return item ? clickNative(item) : false;
 }
 
@@ -625,21 +627,6 @@ function textOf(el) {
   return String(el.innerText || el.textContent || "").replace(/\s+/g, "");
 }
 
-function textContentOf(el) {
-  return String(el?.textContent || "").replace(/\s+/g, "");
-}
-
-function isVisible(el) {
-  const rect = el.getBoundingClientRect();
-  const style = getComputedStyle(el);
-  return (
-    rect.width > 0 &&
-    rect.height > 0 &&
-    style.visibility !== "hidden" &&
-    style.display !== "none"
-  );
-}
-
 function isOurUi(el) {
   return Boolean(el.closest(`#${CREATE_PLUS_ID}, #wxdoc-titlebar-tools, #${REFS_ROOT_ID}, #wxdoc-online-viewers, #${SEARCH_ROOT_ID}, #${SEARCH_PANEL_ID}, #${SEARCH_SETTINGS_ID}, #${DOC_META_ROOT_ID}, #${MENTION_ROOT_ID}, #${FOOTER_ROOT_ID}, #${FOOTER_SPACE_ID}, #${WANDER_ROOT_ID}`));
 }
@@ -689,18 +676,13 @@ function clickNative(el) {
   return false;
 }
 
-function findByExactText(label, opts) {
-  const allowHidden = Boolean(opts && opts.allowHidden);
-  const leftOnly = Boolean(opts && opts.leftOnly);
+function findByExactText(label) {
   const nodes = document.querySelectorAll("button, a, [role='menuitem'], [role='option'], [role='button'], li, div, span");
   let best = null;
   for (let i = 0; i < nodes.length; i += 1) {
     const el = nodes[i];
     if (isOurUi(el)) continue;
     if (textOf(el) !== label) continue;
-    if (!allowHidden && !isVisible(el)) continue;
-    const rect = el.getBoundingClientRect();
-    if (leftOnly && rect.left > 320) continue;
     const clickable = el.closest("button, a, [role='menuitem'], [role='option'], [role='button']") || el;
     if (!best || clickable.innerText.length < best.innerText.length) best = clickable;
   }
@@ -728,36 +710,23 @@ let mentionTimer = 0;
 let savedMention = null;
 let forgetMentionTimer = 0;
 
-function rectOf(rect) {
-  if (!rect) return null;
-  return {
-    top: rect.top,
-    left: rect.left,
-    right: rect.right,
-    bottom: rect.bottom,
-    width: rect.width,
-    height: rect.height,
-  };
-}
-
 function mentionFromText(node, offset) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return null;
-  const host = node.parentElement?.closest(
-    "#zoomable-container, #root-editable, #sc-page-content, #melo-container, .surface, [contenteditable='true']"
-  );
-  if (!host || isOurUi(host)) return null;
-  const before = node.data.slice(0, offset);
+  const parent = node.parentElement;
+  if (!parent || !editorLike(parent) || isOurUi(parent)) return null;
+  const before = node.data.slice(Math.max(0, offset - 41), offset);
   const matched = before.match(MENTION_QUERY_RE);
   if (!matched) return null;
   const caretRange = document.createRange();
   caretRange.setStart(node, offset);
   caretRange.setEnd(node, offset);
+  const caret = caretRange.getBoundingClientRect();
   return {
     query: matched[1],
     node,
     start: offset - matched[0].length,
     end: offset,
-    caret: rectOf(caretRange.getBoundingClientRect()),
+    caret: { top: caret.top, left: caret.left, bottom: caret.bottom },
   };
 }
 
@@ -772,15 +741,6 @@ function readMentionFromSelection() {
     if (prev && prev.nodeType === Node.TEXT_NODE) return mentionFromText(prev, prev.data.length);
   }
   return null;
-}
-
-function nativeMentionPanel() {
-  const panels = document.querySelectorAll(".od_editor_atPopPanel");
-  for (let i = 0; i < panels.length; i += 1) {
-    const panel = panels[i];
-    if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
-  }
-  return panels[0] || null;
 }
 
 function dispatchMention(detail) {
@@ -803,8 +763,14 @@ function rememberMention(hit) {
 }
 
 function mentionTarget() {
-  const live = captureMention();
-  if (live) return live;
+  const hit = readMentionFromSelection();
+  if (hit) {
+    return {
+      node: hit.node,
+      start: hit.start,
+      text: hit.node.data.slice(hit.start, hit.end),
+    };
+  }
   if (savedMention?.node?.isConnected) return savedMention;
   return null;
 }
@@ -814,19 +780,19 @@ function focusSelectionHost() {
   const node = sel && sel.anchorNode;
   const el = node && (node.nodeType === 1 ? node : node.parentElement);
   const host = el && el.closest("[contenteditable='true']");
-  if (host && document.activeElement !== host) {
-    try {
-      host.focus({ preventScroll: true });
-    } catch {
-      host.focus();
-    }
-  }
+  if (host && document.activeElement !== host) host.focus({ preventScroll: true });
+}
+
+function armMention(captured, collapseEnd) {
+  const located = locateCaptured(captured);
+  if (!located) return;
+  selectLocated(located, collapseEnd);
+  focusSelectionHost();
+  selectLocated(located, collapseEnd);
 }
 
 function publishMention() {
-  const path = parseDocPath(location.pathname);
-  const onDoc = path && (path.kind === "doc" || path.kind === "smartpage");
-  const hit = onDoc ? readMentionFromSelection() : null;
+  const hit = isDocDetailPage() ? readMentionFromSelection() : null;
   if (!hit) {
     if (!mentionActive) return;
     mentionActive = false;
@@ -857,7 +823,8 @@ function onPickMention(event) {
   else {
     const items = panel.querySelectorAll(".od_editor_atPopPanel_item");
     for (let i = 0; i < items.length; i += 1) {
-      const text = textContentOf(items[i].querySelector(".od_editor_atPopPanel_item_text") || items[i]);
+      const node = items[i].querySelector(".od_editor_atPopPanel_item_text") || items[i];
+      const text = String(node.textContent || "").replace(/\s+/g, "");
       if (text === label) {
         target = items[i];
         break;
@@ -866,12 +833,7 @@ function onPickMention(event) {
   }
   if (!target) return;
   const typed = mentionTarget();
-  if (typed) {
-    const located = locateCaptured(typed);
-    if (located) selectLocated(located, true);
-    focusSelectionHost();
-    if (located) selectLocated(located, true);
-  }
+  if (typed) armMention(typed, true);
   panel.style.setProperty("opacity", "1", "important");
   panel.style.setProperty("pointer-events", "auto", "important");
   try {
@@ -901,16 +863,6 @@ function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, function (ch) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
   });
-}
-
-function captureMention() {
-  const hit = readMentionFromSelection();
-  if (!hit) return null;
-  return {
-    node: hit.node,
-    start: hit.start,
-    text: hit.node.data.slice(hit.start, hit.end),
-  };
 }
 
 function locateCaptured(captured) {
@@ -955,19 +907,13 @@ function leftoverMention(captured) {
   return { node, start, end: start + len };
 }
 
-function editorHost(node) {
-  const host = node?.parentElement;
-  if (host && editorLike(host)) return host;
-  return host || document.body;
-}
-
 // 企微编辑器认自己的选区和 beforeinput。先按整段删掉 @ 关键字，删不掉再逐字退格。
 function deleteCapturedMention(captured) {
   if (!captured) return false;
   for (let guard = 0; guard < captured.text.length + 2; guard += 1) {
     const located = leftoverMention(captured);
     if (!located) return true;
-    const target = editorHost(located.node);
+    const target = located.node.parentElement || document.body;
     selectLocated(located, false);
     let handled = false;
     try {
@@ -1050,31 +996,14 @@ function pasteDocLink(url, title) {
   const data = new DataTransfer();
   data.setData("text/plain", url);
   data.setData("text/html", `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`);
-  let event;
+  const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
   try {
-    event = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: data });
-  } catch {
-    event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
-  }
-  if (!event.clipboardData) {
-    try {
-      Object.defineProperty(event, "clipboardData", { value: data });
-    } catch {
-      return false;
-    }
-  }
-  if (!event.clipboardData) return false;
-  const target = pasteTarget();
-  const handled = target.dispatchEvent(event) === false;
-  return handled;
-}
-
-function commandInsert(text) {
-  try {
-    return document.execCommand("insertText", false, text);
+    Object.defineProperty(event, "clipboardData", { value: data });
   } catch {
     return false;
   }
+  if (!event.clipboardData) return false;
+  return pasteTarget().dispatchEvent(event) === false;
 }
 
 function onInsertDoc(event) {
@@ -1085,14 +1014,17 @@ function onInsertDoc(event) {
   if (!parseDocUrl(url)) return;
   const typed = mentionTarget();
   if (typed) {
-    const located = locateCaptured(typed);
-    if (located) selectLocated(located, false);
-    focusSelectionHost();
-    if (located) selectLocated(located, false);
+    armMention(typed, false);
     deleteCapturedMention(typed);
   }
   const pasted = pasteDocLink(url, title);
-  if (!pasted) commandInsert(url);
+  if (!pasted) {
+    try {
+      document.execCommand("insertText", false, url);
+    } catch {
+      /* 编辑器不接受 insertText */
+    }
+  }
   if (typed) deleteCapturedMention(typed);
   savedMention = null;
   mentionActive = false;

@@ -74,6 +74,14 @@
     const current = parseDocPath(pathname);
     return Boolean(current && (current.kind === "doc" || current.kind === "smartpage"));
   }
+  function nativeMentionPanel() {
+    const panels = document.querySelectorAll(".od_editor_atPopPanel");
+    for (let i = 0; i < panels.length; i += 1) {
+      const panel = panels[i];
+      if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
+    }
+    return panels[0] || null;
+  }
   function isHomePage(pathname = location.pathname) {
     return /^\/home(?:\/|$)/i.test(pathname);
   }
@@ -694,9 +702,6 @@
     if (!requestOk(data)) throw new Error(data?.head?.msg || "recent failed");
     return takeFiles(unwrapBody(data).files, limit || RECENT_LIMIT);
   }
-  async function recentDocs() {
-    return fetchRecentDocs(RECENT_LIMIT);
-  }
   async function readHistory() {
     const stored = await storageGet("local", { [HISTORY_KEY]: [] });
     const list = stored[HISTORY_KEY];
@@ -947,7 +952,7 @@
     if (item.kind === "history") {
       row.insertAdjacentHTML("afterbegin", TIME_ICON);
     } else {
-      row.insertAdjacentHTML("afterbegin", FILE_ICONS[item.kind] || FILE_ICONS.doc);
+      row.insertAdjacentHTML("afterbegin", fileIcon(item.kind));
     }
     const main = document.createElement("span");
     main.className = "wxqs-item-main";
@@ -1121,7 +1126,7 @@
     try {
       const [history, recent] = await Promise.all([
         readHistory(),
-        ui.recent ? Promise.resolve(ui.recent) : recentDocs()
+        ui.recent ? Promise.resolve(ui.recent) : fetchRecentDocs(RECENT_LIMIT)
       ]);
       if (seq !== ui.seq || ui.keyword) return;
       ui.history = history;
@@ -1870,9 +1875,6 @@
     }
     return host.querySelector(":scope > #zoomable-container") || host.querySelector(":scope > #root-editable") || host.querySelector(":scope > #sc-page-content");
   }
-  function blockText(el) {
-    return cleanText(el?.textContent);
-  }
   function isTitleOnlyLabel(text) {
     return /^(标题|无标题|无标题智能文档|无标题文档|untitled(?:\s+document)?)$/i.test(String(text || "").trim());
   }
@@ -1900,7 +1902,7 @@
         if (/sc-block-(image|video|file|embed|simple_table|table|smartsheet|sheet)/.test(String(el.className))) {
           return false;
         }
-        const text = blockText(el);
+        const text = cleanText(el.textContent);
         if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) return false;
       }
       return true;
@@ -2436,18 +2438,6 @@
     }
     root.classList.toggle(MENTION_GUARD_CLASS, guardOn);
   }
-  function formatEdited(ts) {
-    const label = formatDocDate(ts);
-    return label ? `\u4FEE\u6539\u4E8E ${label}` : "";
-  }
-  function nativeMentionPanel() {
-    const panels = document.querySelectorAll(".od_editor_atPopPanel");
-    for (let i = 0; i < panels.length; i += 1) {
-      const panel = panels[i];
-      if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
-    }
-    return panels[0] || null;
-  }
   function readPeople() {
     const panel = nativeMentionPanel();
     if (!panel) return [];
@@ -2570,9 +2560,6 @@
     return el;
   }
   function bindRow(row, index) {
-    row.addEventListener("mousedown", function(event) {
-      event.preventDefault();
-    });
     row.addEventListener("mouseenter", function() {
       ui3.active = index;
       paintActive();
@@ -2599,7 +2586,6 @@
       row.className = "wxmd-item";
       if (person.kind === "more") row.classList.add("is-more");
       row.setAttribute("role", "option");
-      if (index === ui3.active) row.classList.add("is-active");
       row.dataset.index = String(index);
       const icon = document.createElement("span");
       icon.className = "wxmd-avatar";
@@ -2644,7 +2630,6 @@
       row.type = "button";
       row.className = "wxmd-item";
       row.setAttribute("role", "option");
-      if (index === ui3.active) row.classList.add("is-active");
       row.dataset.index = String(index);
       const icon = document.createElement("span");
       icon.className = "wxmd-icon";
@@ -2656,7 +2641,8 @@
       name.textContent = item.title || "\u672A\u547D\u540D\u6587\u6863";
       const meta = document.createElement("span");
       meta.className = "wxmd-meta";
-      meta.textContent = formatEdited(item.time);
+      const edited = formatDocDate(item.time);
+      meta.textContent = edited ? `\u4FEE\u6539\u4E8E ${edited}` : "";
       body.append(name, meta);
       row.append(icon, body);
       bindRow(row, index);
@@ -2712,7 +2698,8 @@
     const listRows = rows();
     if (ui3.active >= listRows.length) ui3.active = listRows.length ? 0 : -1;
     if (ui3.active < 0 && listRows.length) ui3.active = 0;
-    const peopleNow = `${peopleKey(ui3.people)}${ui3.people.length ? "" : nativeMentionPanel() ? "hold" : ""}`;
+    const peopleMark = !ui3.people.length && nativeMentionPanel() ? "hold" : "";
+    const peopleNow = `${peopleKey(ui3.people)}${peopleMark}`;
     const peopleSlot = root.querySelector(".wxmd-people");
     if (peopleSlot && peopleNow !== paintedPeople) {
       paintedPeople = peopleNow;
@@ -3006,7 +2993,6 @@
     const queryChanged = !wasOpen || query !== ui3.query;
     ui3.caret = detail.caret || null;
     if (!queryChanged) {
-      syncPeople();
       place();
       return;
     }

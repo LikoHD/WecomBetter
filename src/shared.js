@@ -132,6 +132,15 @@ export function isDocDetailPage(pathname = location.pathname) {
   return Boolean(current && (current.kind === "doc" || current.kind === "smartpage"));
 }
 
+export function nativeMentionPanel() {
+  const panels = document.querySelectorAll(".od_editor_atPopPanel");
+  for (let i = 0; i < panels.length; i += 1) {
+    const panel = panels[i];
+    if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
+  }
+  return panels[0] || null;
+}
+
 export function isHomePage(pathname = location.pathname) {
   return /^\/home(?:\/|$)/i.test(pathname);
 }

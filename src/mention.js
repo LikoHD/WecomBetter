@@ -6,6 +6,7 @@ import {
   PICK_MENTION_EVENT,
   cleanText,
   extensionAlive,
+  nativeMentionPanel,
 } from "./shared.js";
 import { fetchRecentDocs, fileIcon, formatDocDate, searchDocs } from "./search.js";
 
@@ -73,20 +74,6 @@ export function setMentionGuard(on) {
     return;
   }
   root.classList.toggle(MENTION_GUARD_CLASS, guardOn);
-}
-
-function formatEdited(ts) {
-  const label = formatDocDate(ts);
-  return label ? `修改于 ${label}` : "";
-}
-
-function nativeMentionPanel() {
-  const panels = document.querySelectorAll(".od_editor_atPopPanel");
-  for (let i = 0; i < panels.length; i += 1) {
-    const panel = panels[i];
-    if (panel.querySelector(".od_editor_atPopPanel_item, .od_editor_atPopPanel_more")) return panel;
-  }
-  return panels[0] || null;
 }
 
 function readPeople() {
@@ -231,9 +218,6 @@ function sectionTitle(text) {
 }
 
 function bindRow(row, index) {
-  row.addEventListener("mousedown", function (event) {
-    event.preventDefault();
-  });
   row.addEventListener("mouseenter", function () {
     ui.active = index;
     paintActive();
@@ -261,7 +245,6 @@ function renderPeople(startIndex) {
     row.className = "wxmd-item";
     if (person.kind === "more") row.classList.add("is-more");
     row.setAttribute("role", "option");
-    if (index === ui.active) row.classList.add("is-active");
     row.dataset.index = String(index);
     const icon = document.createElement("span");
     icon.className = "wxmd-avatar";
@@ -307,7 +290,6 @@ function renderDocs(startIndex) {
     row.type = "button";
     row.className = "wxmd-item";
     row.setAttribute("role", "option");
-    if (index === ui.active) row.classList.add("is-active");
     row.dataset.index = String(index);
     const icon = document.createElement("span");
     icon.className = "wxmd-icon";
@@ -319,7 +301,8 @@ function renderDocs(startIndex) {
     name.textContent = item.title || "未命名文档";
     const meta = document.createElement("span");
     meta.className = "wxmd-meta";
-    meta.textContent = formatEdited(item.time);
+    const edited = formatDocDate(item.time);
+    meta.textContent = edited ? `修改于 ${edited}` : "";
     body.append(name, meta);
     row.append(icon, body);
     bindRow(row, index);
@@ -382,7 +365,8 @@ function render() {
   if (ui.active >= listRows.length) ui.active = listRows.length ? 0 : -1;
   if (ui.active < 0 && listRows.length) ui.active = 0;
 
-  const peopleNow = `${peopleKey(ui.people)}\u0001${ui.people.length ? "" : nativeMentionPanel() ? "hold" : ""}`;
+  const peopleMark = !ui.people.length && nativeMentionPanel() ? "hold" : "";
+  const peopleNow = `${peopleKey(ui.people)}\u0001${peopleMark}`;
   const peopleSlot = root.querySelector(".wxmd-people");
   if (peopleSlot && peopleNow !== paintedPeople) {
     paintedPeople = peopleNow;
@@ -703,7 +687,6 @@ function onMention(event) {
   const queryChanged = !wasOpen || query !== ui.query;
   ui.caret = detail.caret || null;
   if (!queryChanged) {
-    syncPeople();
     place();
     return;
   }

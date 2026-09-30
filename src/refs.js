@@ -91,10 +91,6 @@ function findCanvas(host) {
   );
 }
 
-function blockText(el) {
-  return cleanText(el?.textContent);
-}
-
 function isTitleOnlyLabel(text) {
   return /^(标题|无标题|无标题智能文档|无标题文档|untitled(?:\s+document)?)$/i.test(String(text || "").trim());
 }
@@ -129,7 +125,7 @@ export function isBlankEditorPage() {
       if (/sc-block-(image|video|file|embed|simple_table|table|smartsheet|sheet)/.test(String(el.className))) {
         return false;
       }
-      const text = blockText(el);
+      const text = cleanText(el.textContent);
       if (text && !isTitleOnlyLabel(text) && !isPlaceholderBodyText(text)) return false;
     }
     return true;

@@ -571,10 +571,6 @@ export async function fetchRecentDocs(limit) {
   return takeFiles(unwrapBody(data).files, limit || RECENT_LIMIT);
 }
 
-async function recentDocs() {
-  return fetchRecentDocs(RECENT_LIMIT);
-}
-
 async function readHistory() {
   const stored = await storageGet("local", { [HISTORY_KEY]: [] });
   const list = stored[HISTORY_KEY];
@@ -857,7 +853,7 @@ function makeRow(item, index) {
   if (item.kind === "history") {
     row.insertAdjacentHTML("afterbegin", TIME_ICON);
   } else {
-    row.insertAdjacentHTML("afterbegin", FILE_ICONS[item.kind] || FILE_ICONS.doc);
+    row.insertAdjacentHTML("afterbegin", fileIcon(item.kind));
   }
   const main = document.createElement("span");
   main.className = "wxqs-item-main";
@@ -1041,7 +1037,7 @@ async function loadIdleList() {
   try {
     const [history, recent] = await Promise.all([
       readHistory(),
-      ui.recent ? Promise.resolve(ui.recent) : recentDocs(),
+      ui.recent ? Promise.resolve(ui.recent) : fetchRecentDocs(RECENT_LIMIT),
     ]);
     if (seq !== ui.seq || ui.keyword) return;
     ui.history = history;

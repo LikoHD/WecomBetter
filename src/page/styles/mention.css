@@ -97,16 +97,6 @@ html.wxmd-mention-on .od_editor_atPopPanel {
   line-height: 18px;
 }
 
-#wxdoc-mention-docs .wxmd-hint {
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(23, 26, 29, 0.4);
-  font-size: 12px;
-  line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 #wxdoc-mention-docs .wxmd-list {
   min-height: 36px;
   max-height: 400px;

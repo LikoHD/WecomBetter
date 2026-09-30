@@ -24,8 +24,7 @@ async function persist() {
   paint(await writeFeatures(next));
 }
 
-const ver = document.querySelector(".ver");
-if (ver) ver.textContent = chrome.runtime.getManifest().version;
+document.querySelector(".ver").textContent = chrome.runtime.getManifest().version;
 
 const features = await readFeatures();
 paint(features);
