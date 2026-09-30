@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .shot-head { padding-top: 46px; }
+  .shot-head h1 { font-size: 40px; }
+  .stage { width: 1060px; margin: 34px auto 0; position: relative; }
+  .stage .win { height: 556px; }
+  .av-stack .ink-ring { top: -14px; left: -22px; width: calc(100% + 40px); height: 58px; transform: rotate(1.8deg); }
+  .av-tip { bottom: auto; top: calc(100% + 12px); }
+  .av-tip::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #1f2329; }
+  .av-stack .ink-note { top: 108px; left: 50%; transform: translateX(-50%) rotate(-5deg); }
+</style>
+</head>
+<body>
+
+<header class="shot-head">
+  <p class="eyebrow">Feature 02 · Who's Here</p>
+  <h1>谁正在看，一眼就知道。</h1>
+  <p class="sub">顶栏堆叠此刻在看的人。<em>hover 看名字，点击复制 ID</em>——协作前先知道谁在场。</p>
+</header>
+
+<div class="stage">
+  <div class="win">
+    <div class="win-bar">
+      <span class="win-dot r"></span><span class="win-dot y"></span><span class="win-dot g"></span>
+      <span class="win-url">doc.weixin.qq.com/doc/xyz789</span>
+    </div>
+    <div class="win-body">
+      <div class="doc-topbar">
+        <div class="doc-id">
+          <svg class="doc-file-ic" viewBox="0 0 24 24"><path d="M6 2.5h8L19 7.5v13a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20.5v-16A1.5 1.5 0 0 1 6 2.5z" fill="#E8F1FE"/><path d="M14 2.5 19 7.5h-4a1 1 0 0 1-1-1v-4z" fill="#B9D4FB"/><path d="M8.5 12h7M8.5 15.5h7M8.5 8.8h3" stroke="#336DF4" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span class="doc-name">设计规范 v3.0</span>
+        </div>
+        <div class="wxqs">
+          <div class="wxqs-field">
+            <svg class="wxqs-glyph" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 13.8 13.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            <span class="wxqs-text is-ph">搜索文档</span>
+          </div>
+        </div>
+        <div class="doc-side">
+          <div class="av-stack">
+            <span class="av c1">张</span><span class="av c2">李</span><span class="av c3">王</span>
+            <span class="av-tip">张三 · 点击复制 ID</span>
+            <svg class="ink-ring" viewBox="0 0 138 58" preserveAspectRatio="none">
+              <ellipse cx="69" cy="29" rx="64" ry="24"/>
+            </svg>
+            <span class="ink-note">3 人正在看</span>
+          </div>
+          <span class="doc-share">分享</span>
+        </div>
+      </div>
+      <div class="doc-page">
+        <div class="doc-title">设计规范 v3.0</div>
+        <div class="doc-meta">
+          <span class="m-av" style="background:#00A870">李</span>
+          <span>李四</span><span class="m-sep">·</span><span>创建于 8月2日</span><span class="m-sep">·</span><span>最后编辑 昨天 18:07</span>
+        </div>
+        <div class="doc-h2">一、色彩系统</div>
+        <p class="doc-p">主色沿用品牌蓝，功能色控制在四种以内。所有色值以 tokens 表为唯一事实源，组件不再单独定义颜色。</p>
+        <div class="doc-li">主色 / 辅助色 / 中性色三层结构</div>
+        <div class="doc-li">深浅两套模式共用同一套语义 token</div>
+        <div class="doc-h2">二、字体与排版</div>
+        <p class="doc-p">正文 14px、行高 1.8；标题层级最多四级，负字距收紧。中文场景下避免全大写与斜体。</p>
+        <div class="doc-quote">规范不是限制发挥，而是让协作时的每一次引用都有据可查。</div>
+        <div class="doc-h2">三、组件状态</div>
+        <p class="doc-p">所有交互组件必须提供 hover / active / disabled / loading 四态，缺失状态视为未完成。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
