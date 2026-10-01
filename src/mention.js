@@ -17,6 +17,7 @@ const PEOPLE_POLL_MS = 200;
 const RECENT_TTL = 120000;
 const SEARCH_TTL = 60000;
 const MENTION_GUARD_CLASS = "wxmd-mention-on";
+const NATIVE_AT_LAYER_ID = "AT_MANAGER_ID";
 const CLOSE_MS = 150;
 
 const PERSON_ICON =
@@ -54,6 +55,7 @@ const ui = {
   emptyConfirmed: false,
   pin: null,
   closeTimer: 0,
+  dismissed: false,
 };
 
 export function setMentionGuard(on) {
@@ -578,11 +580,13 @@ function coversEditor(el) {
   );
 }
 
+// 普通文档里 #AT_MANAGER_ID 再往上是画布的公共浮层，链接卡片等控件也挂在那，不能一起屏蔽。
 function muteNativeLayer() {
   document.querySelectorAll(".od_editor_atPopPanel").forEach(function (panel) {
     let node = panel;
     while (node && node !== document.body && node !== document.documentElement) {
       node.style.setProperty("pointer-events", "none", "important");
+      if (node.id === NATIVE_AT_LAYER_ID) break;
       const parent = node.parentElement;
       if (!parent || coversEditor(parent)) break;
       node = parent;
@@ -671,6 +675,7 @@ function onKeyDown(event) {
     event.stopPropagation();
     if (ui.active >= 0) choose(ui.active);
   } else if (event.key === "Escape") {
+    ui.dismissed = true;
     close();
   }
 }
@@ -679,9 +684,12 @@ function onMention(event) {
   const detail = event.detail;
   if (!detail || detail.source !== MSG_SOURCE || !ui.root) return;
   if (!detail.active) {
+    ui.dismissed = false;
     close();
     return;
   }
+  // Esc 之后 @ 还在光标前，页面会继续报告；等这次 @ 结束再允许打开。
+  if (ui.dismissed) return;
   const query = String(detail.query || "");
   const wasOpen = ui.open;
   const queryChanged = !wasOpen || query !== ui.query;
@@ -722,6 +730,7 @@ function ensureRoot() {
 
 export function unmountMention() {
   close();
+  ui.dismissed = false;
   setMentionGuard(false);
   if (mounted) {
     document.removeEventListener(MENTION_EVENT, onMention);

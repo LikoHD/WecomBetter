@@ -705,10 +705,14 @@ function hookHistory() {
 }
 
 const MENTION_QUERY_RE = /@([^\s@]{0,40})$/;
+const MELO_INPUT_ID = "melo-hidden-editor";
+const MELO_CARET_SETTLE_MS = 80;
 let mentionActive = false;
 let mentionTimer = 0;
 let savedMention = null;
 let forgetMentionTimer = 0;
+let meloCaretTimer = 0;
+let lastMeloCaret = "";
 
 function mentionFromText(node, offset) {
   if (!node || node.nodeType !== Node.TEXT_NODE) return null;
@@ -743,6 +747,63 @@ function readMentionFromSelection() {
   return null;
 }
 
+// 普通文档正文画在 canvas 上，输入只经过一个用完即清空的隐藏 div，DOM 里读不到 @。
+// 关键字改从编辑器文本流按光标位置读，面板跟着画布光标走。
+function meloEditor() {
+  const input = document.getElementById(MELO_INPUT_ID);
+  if (!input || document.activeElement !== input) return null;
+  const state = window.pad?.editor?._state;
+  const pool = state?.getTextStream?.()?.textPool;
+  if (!pool || typeof pool.subText !== "function" || typeof state.moveTo !== "function") return null;
+  return { input, state, pool };
+}
+
+function meloCaret(input) {
+  const caret = document.querySelector(".melo-caret")?.getBoundingClientRect();
+  const box = caret && caret.height > 0 ? caret : input.getBoundingClientRect();
+  return { top: box.top, left: box.left, bottom: box.bottom };
+}
+
+function readMentionFromMelo() {
+  const melo = meloEditor();
+  const range = melo?.state.selection?.gcpRange;
+  if (!range || range.len !== 0) return null;
+  const end = Number(range.gcpBegin) || 0;
+  const before = String(melo.pool.subText(Math.max(0, end - 41), Math.min(41, end)) || "");
+  // 文本流里夹着段落符和域标记，已插入提及的显示文字也带 @，只看最后一个控制符之后的文字。
+  const matched = before.split(/[\u0000-\u001f]/).pop().match(MENTION_QUERY_RE);
+  if (!matched) return null;
+  return {
+    melo: true,
+    query: matched[1],
+    start: end - matched[0].length,
+    end,
+    text: matched[0],
+    caret: meloCaret(melo.input),
+  };
+}
+
+function readMention() {
+  return readMentionFromSelection() || readMentionFromMelo();
+}
+
+function locateMelo(captured) {
+  const melo = meloEditor();
+  if (!melo || !captured?.text) return null;
+  const from = Math.max(0, captured.start - 200);
+  const size = Number(melo.pool.size?.()) || 0;
+  const data = String(melo.pool.subText(from, Math.max(0, Math.min(400 + captured.text.length, size - from))) || "");
+  const at = nearestIndex(data, captured.text, captured.start - from);
+  if (at < 0) return null;
+  return { melo, start: from + at, len: captured.text.length };
+}
+
+// 选中 @ 关键字后粘贴，编辑器会把选区整段换成文档链接。
+function selectMeloMention(captured) {
+  const located = locateMelo(captured);
+  if (located) located.melo.state.moveTo(located.start, located.len);
+}
+
 function dispatchMention(detail) {
   document.dispatchEvent(
     new CustomEvent(MENTION_EVENT, {
@@ -752,26 +813,25 @@ function dispatchMention(detail) {
   );
 }
 
-function rememberMention(hit) {
-  window.clearTimeout(forgetMentionTimer);
-  if (!hit?.node) return;
-  savedMention = {
+function captureOf(hit) {
+  if (hit.melo) return { melo: true, start: hit.start, text: hit.text };
+  return {
     node: hit.node,
     start: hit.start,
     text: hit.node.data.slice(hit.start, hit.end),
   };
 }
 
+function rememberMention(hit) {
+  window.clearTimeout(forgetMentionTimer);
+  if (!hit?.node && !hit?.melo) return;
+  savedMention = captureOf(hit);
+}
+
 function mentionTarget() {
-  const hit = readMentionFromSelection();
-  if (hit) {
-    return {
-      node: hit.node,
-      start: hit.start,
-      text: hit.node.data.slice(hit.start, hit.end),
-    };
-  }
-  if (savedMention?.node?.isConnected) return savedMention;
+  const hit = readMention();
+  if (hit) return captureOf(hit);
+  if (savedMention?.melo || savedMention?.node?.isConnected) return savedMention;
   return null;
 }
 
@@ -792,8 +852,11 @@ function armMention(captured, collapseEnd) {
 }
 
 function publishMention() {
-  const hit = isDocDetailPage() ? readMentionFromSelection() : null;
+  window.clearTimeout(meloCaretTimer);
+  meloCaretTimer = 0;
+  const hit = isDocDetailPage() ? readMention() : null;
   if (!hit) {
+    lastMeloCaret = "";
     if (!mentionActive) return;
     mentionActive = false;
     dispatchMention({ active: false });
@@ -809,6 +872,12 @@ function publishMention() {
     query: hit.query,
     caret: hit.caret,
   });
+  if (!hit.melo) return;
+  // 画布光标比文本流晚一两帧才挪到新位置，位置还在变就再读一次。
+  const caretKey = `${Math.round(hit.caret.left)},${Math.round(hit.caret.top)}`;
+  if (caretKey === lastMeloCaret) return;
+  lastMeloCaret = caretKey;
+  meloCaretTimer = window.setTimeout(publishMention, MELO_CARET_SETTLE_MS);
 }
 
 function onPickMention(event) {
@@ -833,7 +902,7 @@ function onPickMention(event) {
   }
   if (!target) return;
   const typed = mentionTarget();
-  if (typed) armMention(typed, true);
+  if (typed && !typed.melo) armMention(typed, true);
   panel.style.setProperty("opacity", "1", "important");
   panel.style.setProperty("pointer-events", "auto", "important");
   try {
@@ -845,7 +914,8 @@ function onPickMention(event) {
   mentionActive = false;
   dispatchMention({ active: false });
   // 通讯录选择器还要靠这段 @ 定位，选完由企微自己替换。列表里的人插入后若 @ 还在，再删掉。
-  if (kind === "more" || !typed) return;
+  // 普通文档的画布编辑器选人时会连同 @ 关键字一起换掉，也不认合成的删除按键，不用补删。
+  if (kind === "more" || !typed || typed.melo) return;
   window.setTimeout(function () {
     deleteCapturedMention(typed);
   }, 80);
@@ -865,17 +935,21 @@ function escapeHtml(value) {
   });
 }
 
-function locateCaptured(captured) {
-  if (!captured?.node?.isConnected || !captured.text) return null;
-  const data = captured.node.data;
+function nearestIndex(data, text, near) {
   let from = 0;
   let best = -1;
   while (from <= data.length) {
-    const at = data.indexOf(captured.text, from);
+    const at = data.indexOf(text, from);
     if (at < 0) break;
-    if (best < 0 || Math.abs(at - captured.start) < Math.abs(best - captured.start)) best = at;
+    if (best < 0 || Math.abs(at - near) < Math.abs(best - near)) best = at;
     from = at + 1;
   }
+  return best;
+}
+
+function locateCaptured(captured) {
+  if (!captured?.node?.isConnected || !captured.text) return null;
+  const best = nearestIndex(captured.node.data, captured.text, captured.start);
   if (best < 0) return null;
   return { node: captured.node, start: best, end: best + captured.text.length };
 }
@@ -1013,7 +1087,8 @@ function onInsertDoc(event) {
   const title = String(detail.title || "").trim();
   if (!parseDocUrl(url)) return;
   const typed = mentionTarget();
-  if (typed) {
+  if (typed?.melo) selectMeloMention(typed);
+  else if (typed) {
     armMention(typed, false);
     deleteCapturedMention(typed);
   }
@@ -1025,7 +1100,7 @@ function onInsertDoc(event) {
       /* 编辑器不接受 insertText */
     }
   }
-  if (typed) deleteCapturedMention(typed);
+  if (typed && !typed.melo) deleteCapturedMention(typed);
   savedMention = null;
   mentionActive = false;
   dispatchMention({ active: false });
@@ -1038,6 +1113,7 @@ document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
 document.addEventListener(PICK_MENTION_EVENT, onPickMention);
 document.addEventListener("selectionchange", scheduleMention);
 document.addEventListener("keyup", scheduleMention, true);
+document.addEventListener("mouseup", scheduleMention, true);
 document.addEventListener("input", scheduleMention, true);
 document.addEventListener("compositionend", scheduleMention, true);
 window.addEventListener("scroll", scheduleMention, true);

@@ -684,10 +684,14 @@
     window.addEventListener("popstate", schedulePublish);
   }
   var MENTION_QUERY_RE = /@([^\s@]{0,40})$/;
+  var MELO_INPUT_ID = "melo-hidden-editor";
+  var MELO_CARET_SETTLE_MS = 80;
   var mentionActive = false;
   var mentionTimer = 0;
   var savedMention = null;
   var forgetMentionTimer = 0;
+  var meloCaretTimer = 0;
+  var lastMeloCaret = "";
   function mentionFromText(node, offset) {
     if (!node || node.nodeType !== Node.TEXT_NODE) return null;
     const parent = node.parentElement;
@@ -719,6 +723,53 @@
     }
     return null;
   }
+  function meloEditor() {
+    const input = document.getElementById(MELO_INPUT_ID);
+    if (!input || document.activeElement !== input) return null;
+    const state = window.pad?.editor?._state;
+    const pool = state?.getTextStream?.()?.textPool;
+    if (!pool || typeof pool.subText !== "function" || typeof state.moveTo !== "function") return null;
+    return { input, state, pool };
+  }
+  function meloCaret(input) {
+    const caret = document.querySelector(".melo-caret")?.getBoundingClientRect();
+    const box = caret && caret.height > 0 ? caret : input.getBoundingClientRect();
+    return { top: box.top, left: box.left, bottom: box.bottom };
+  }
+  function readMentionFromMelo() {
+    const melo = meloEditor();
+    const range = melo?.state.selection?.gcpRange;
+    if (!range || range.len !== 0) return null;
+    const end = Number(range.gcpBegin) || 0;
+    const before = String(melo.pool.subText(Math.max(0, end - 41), Math.min(41, end)) || "");
+    const matched = before.split(/[\u0000-\u001f]/).pop().match(MENTION_QUERY_RE);
+    if (!matched) return null;
+    return {
+      melo: true,
+      query: matched[1],
+      start: end - matched[0].length,
+      end,
+      text: matched[0],
+      caret: meloCaret(melo.input)
+    };
+  }
+  function readMention() {
+    return readMentionFromSelection() || readMentionFromMelo();
+  }
+  function locateMelo(captured) {
+    const melo = meloEditor();
+    if (!melo || !captured?.text) return null;
+    const from = Math.max(0, captured.start - 200);
+    const size = Number(melo.pool.size?.()) || 0;
+    const data = String(melo.pool.subText(from, Math.max(0, Math.min(400 + captured.text.length, size - from))) || "");
+    const at = nearestIndex(data, captured.text, captured.start - from);
+    if (at < 0) return null;
+    return { melo, start: from + at, len: captured.text.length };
+  }
+  function selectMeloMention(captured) {
+    const located = locateMelo(captured);
+    if (located) located.melo.state.moveTo(located.start, located.len);
+  }
   function dispatchMention(detail) {
     document.dispatchEvent(
       new CustomEvent(MENTION_EVENT, {
@@ -727,25 +778,23 @@
       })
     );
   }
-  function rememberMention(hit) {
-    window.clearTimeout(forgetMentionTimer);
-    if (!hit?.node) return;
-    savedMention = {
+  function captureOf(hit) {
+    if (hit.melo) return { melo: true, start: hit.start, text: hit.text };
+    return {
       node: hit.node,
       start: hit.start,
       text: hit.node.data.slice(hit.start, hit.end)
     };
   }
+  function rememberMention(hit) {
+    window.clearTimeout(forgetMentionTimer);
+    if (!hit?.node && !hit?.melo) return;
+    savedMention = captureOf(hit);
+  }
   function mentionTarget() {
-    const hit = readMentionFromSelection();
-    if (hit) {
-      return {
-        node: hit.node,
-        start: hit.start,
-        text: hit.node.data.slice(hit.start, hit.end)
-      };
-    }
-    if (savedMention?.node?.isConnected) return savedMention;
+    const hit = readMention();
+    if (hit) return captureOf(hit);
+    if (savedMention?.melo || savedMention?.node?.isConnected) return savedMention;
     return null;
   }
   function focusSelectionHost() {
@@ -763,8 +812,11 @@
     selectLocated(located, collapseEnd);
   }
   function publishMention() {
-    const hit = isDocDetailPage() ? readMentionFromSelection() : null;
+    window.clearTimeout(meloCaretTimer);
+    meloCaretTimer = 0;
+    const hit = isDocDetailPage() ? readMention() : null;
     if (!hit) {
+      lastMeloCaret = "";
       if (!mentionActive) return;
       mentionActive = false;
       dispatchMention({ active: false });
@@ -780,6 +832,11 @@
       query: hit.query,
       caret: hit.caret
     });
+    if (!hit.melo) return;
+    const caretKey = `${Math.round(hit.caret.left)},${Math.round(hit.caret.top)}`;
+    if (caretKey === lastMeloCaret) return;
+    lastMeloCaret = caretKey;
+    meloCaretTimer = window.setTimeout(publishMention, MELO_CARET_SETTLE_MS);
   }
   function onPickMention(event) {
     const detail = event.detail;
@@ -803,7 +860,7 @@
     }
     if (!target) return;
     const typed = mentionTarget();
-    if (typed) armMention(typed, true);
+    if (typed && !typed.melo) armMention(typed, true);
     panel.style.setProperty("opacity", "1", "important");
     panel.style.setProperty("pointer-events", "auto", "important");
     try {
@@ -814,7 +871,7 @@
     }
     mentionActive = false;
     dispatchMention({ active: false });
-    if (kind === "more" || !typed) return;
+    if (kind === "more" || !typed || typed.melo) return;
     window.setTimeout(function() {
       deleteCapturedMention(typed);
     }, 80);
@@ -831,17 +888,20 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
     });
   }
-  function locateCaptured(captured) {
-    if (!captured?.node?.isConnected || !captured.text) return null;
-    const data = captured.node.data;
+  function nearestIndex(data, text, near) {
     let from = 0;
     let best = -1;
     while (from <= data.length) {
-      const at = data.indexOf(captured.text, from);
+      const at = data.indexOf(text, from);
       if (at < 0) break;
-      if (best < 0 || Math.abs(at - captured.start) < Math.abs(best - captured.start)) best = at;
+      if (best < 0 || Math.abs(at - near) < Math.abs(best - near)) best = at;
       from = at + 1;
     }
+    return best;
+  }
+  function locateCaptured(captured) {
+    if (!captured?.node?.isConnected || !captured.text) return null;
+    const best = nearestIndex(captured.node.data, captured.text, captured.start);
     if (best < 0) return null;
     return { node: captured.node, start: best, end: best + captured.text.length };
   }
@@ -963,7 +1023,8 @@
     const title = String(detail.title || "").trim();
     if (!parseDocUrl(url)) return;
     const typed = mentionTarget();
-    if (typed) {
+    if (typed?.melo) selectMeloMention(typed);
+    else if (typed) {
       armMention(typed, false);
       deleteCapturedMention(typed);
     }
@@ -974,7 +1035,7 @@
       } catch {
       }
     }
-    if (typed) deleteCapturedMention(typed);
+    if (typed && !typed.melo) deleteCapturedMention(typed);
     savedMention = null;
     mentionActive = false;
     dispatchMention({ active: false });
@@ -986,6 +1047,7 @@
   document.addEventListener(PICK_MENTION_EVENT, onPickMention);
   document.addEventListener("selectionchange", scheduleMention);
   document.addEventListener("keyup", scheduleMention, true);
+  document.addEventListener("mouseup", scheduleMention, true);
   document.addEventListener("input", scheduleMention, true);
   document.addEventListener("compositionend", scheduleMention, true);
   window.addEventListener("scroll", scheduleMention, true);
