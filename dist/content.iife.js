@@ -2387,6 +2387,7 @@
   var RECENT_TTL = 12e4;
   var SEARCH_TTL = 6e4;
   var MENTION_GUARD_CLASS = "wxmd-mention-on";
+  var NATIVE_AT_LAYER_ID = "AT_MANAGER_ID";
   var CLOSE_MS = 150;
   var PERSON_ICON2 = '<svg class="wxmd-glyph" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M10 10.2a3.1 3.1 0 100-6.2 3.1 3.1 0 000 6.2zM4.4 16.2c.5-2.3 2.6-3.6 5.6-3.6s5.1 1.3 5.6 3.6H4.4z"/></svg>';
   var MORE_ICON = '<svg class="wxmd-glyph" viewBox="0 0 20 20" aria-hidden="true"><path fill="currentColor" d="M4 5.2h12v1.3H4V5.2zm0 4.1h12v1.3H4V9.3zm0 4.2h8v1.3H4v-1.3z"/></svg>';
@@ -2417,7 +2418,8 @@
     error: "",
     emptyConfirmed: false,
     pin: null,
-    closeTimer: 0
+    closeTimer: 0,
+    dismissed: false
   };
   function setMentionGuard(on) {
     guardOn = Boolean(on);
@@ -2895,6 +2897,7 @@
       let node = panel;
       while (node && node !== document.body && node !== document.documentElement) {
         node.style.setProperty("pointer-events", "none", "important");
+        if (node.id === NATIVE_AT_LAYER_ID) break;
         const parent = node.parentElement;
         if (!parent || coversEditor(parent)) break;
         node = parent;
@@ -2978,6 +2981,7 @@
       event.stopPropagation();
       if (ui3.active >= 0) choose(ui3.active);
     } else if (event.key === "Escape") {
+      ui3.dismissed = true;
       close();
     }
   }
@@ -2985,9 +2989,11 @@
     const detail = event.detail;
     if (!detail || detail.source !== MSG_SOURCE || !ui3.root) return;
     if (!detail.active) {
+      ui3.dismissed = false;
       close();
       return;
     }
+    if (ui3.dismissed) return;
     const query = String(detail.query || "");
     const wasOpen = ui3.open;
     const queryChanged = !wasOpen || query !== ui3.query;
@@ -3026,6 +3032,7 @@
   }
   function unmountMention() {
     close();
+    ui3.dismissed = false;
     setMentionGuard(false);
     if (mounted) {
       document.removeEventListener(MENTION_EVENT, onMention);
