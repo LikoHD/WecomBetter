@@ -154,8 +154,8 @@
   transform: translateY(60px);
   opacity: 0.6;
   transition:
-    transform var(--dur-hero) var(--ease-dia),
-    opacity var(--dur-hero) var(--ease-dia);
+    transform var(--dur-hero) var(--ease-swoop),
+    opacity var(--dur-hero) var(--ease-swoop);
   pointer-events: none;
 }
 

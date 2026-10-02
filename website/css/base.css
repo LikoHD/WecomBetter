@@ -158,8 +158,8 @@ ol {
   opacity: 0;
   transform: translateY(28px);
   transition:
-    opacity var(--dur-reveal) var(--ease-dia),
-    transform var(--dur-reveal) var(--ease-dia);
+    opacity var(--dur-reveal) var(--ease-swoop),
+    transform var(--dur-reveal) var(--ease-swoop);
 }
 
 .reveal.is-in {

@@ -1,10 +1,10 @@
 /* ==========================================================================
    WecomBetter 官网 —— Builder H：S0 导航 / S1 Hero / S2 Marquee
-   v2 · 按 diabrowser.com 实测像素级规格精修
+   v2 · 像素级规格精修
    所有选择器均以 .nav- / .hero- / .marquee- 开头，不污染他人
    ========================================================================== */
 
-/* ---------------- S0 导航 · 悬浮胶囊（Dia 实测） ---------------- */
+/* ---------------- S0 导航 · 悬浮胶囊 ---------------- */
 .nav-shell {
   position: fixed;
   top: 28px;
@@ -24,7 +24,7 @@
   border-radius: var(--radius-nav);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 2px rgba(0, 0, 0, 0.04);
   transform: translateX(-50%);
-  /* Dia 滚动后不做任何变化：无 is-scrolled 态 */
+  /* 滚动后不做任何变化：无 is-scrolled 态 */
 }
 .nav-brand {
   display: flex;
@@ -167,8 +167,7 @@
   gap: 12px;
   margin-bottom: 16px;
 }
-/* 主 CTA 下载规格兜底：base.css 的 .btn 尚未更新到 Dia 规格（52px/15px/w500、
-   无 scale+三层阴影），此处用 .hero- 前缀类补齐 §4 主按钮全部参数 */
+/* 主 CTA 下载规格：随 hero 的 --s 等比缩放，补齐 §4 主按钮全部参数 */
 .hero-btn-download {
   height: clamp(48px, calc(56 * var(--s)), 56px);
   padding: 0 clamp(20px, calc(24 * var(--s)), 24px);
@@ -182,7 +181,7 @@
     background var(--dur-hover) ease;
 }
 .hero-btn-download:hover {
-  background: var(--btn); /* 覆盖 base .btn:hover 的变灰，Dia 规格 hover 不改底色 */
+  background: var(--btn); /* hover 不改底色 */
   transform: scale(1.02);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
@@ -428,7 +427,7 @@
 }
 .hero-boot.is-on .hero-title-line {
   transform: translateY(0);
-  transition: transform 0.9s var(--ease-dia) 0.62s;
+  transition: transform 0.9s var(--ease-swoop) 0.62s;
 }
 .hero-boot.is-on .hero-title-mask:nth-child(2) .hero-title-line {
   transition-delay: 0.71s;
@@ -456,7 +455,7 @@
 .hero-boot.is-on .hero-window {
   opacity: 1;
   transform: none;
-  transition: opacity 1s var(--ease-out) 1.15s, transform 1s var(--ease-dia) 1.15s;
+  transition: opacity 1s var(--ease-out) 1.15s, transform 1s var(--ease-swoop) 1.15s;
 }
 
 /* ---------------- S2 Marquee ---------------- */
