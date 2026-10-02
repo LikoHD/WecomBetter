@@ -1040,7 +1040,7 @@
     mentionActive = false;
     dispatchMention({ active: false });
   }
-  window.__WECOM_BETTER__ = "1.0.4";
+  window.__WECOM_BETTER__ = "1.1.1";
   document.addEventListener(HELLO_EVENT, publish);
   document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
   document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
