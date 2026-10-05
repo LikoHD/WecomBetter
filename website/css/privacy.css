@@ -1,0 +1,124 @@
+/* 隐私说明页。选择器以 .pv- 开头。 */
+
+.pv-page {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.pv-bar {
+  display: flex;
+  align-items: center;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 28px 24px 0;
+}
+
+.pv-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.pv-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.pv-name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pv-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 72px 24px 96px;
+}
+
+.pv-kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.pv-title {
+  margin: 12px 0 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.pv-date {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.pv-lead,
+.pv-main p {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.pv-lead {
+  margin-top: 28px;
+  color: var(--ink);
+}
+
+.pv-main h2 {
+  margin: 36px 0 8px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.pv-main a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pv-rule {
+  margin: 56px 0 0;
+  border: 0;
+  border-top: 1px solid var(--stroke);
+}
+
+.pv-en {
+  margin-top: 56px;
+}
+
+.pv-en + h2 {
+  margin-top: 12px;
+}
+
+.pv-gap {
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .pv-title {
+    font-size: 32px;
+  }
+
+  .pv-main {
+    padding-top: 48px;
+  }
+}
