@@ -1,4 +1,52 @@
 (() => {
+  // src/editing.js
+  var EDIT_IDLE_MS = 500;
+  function editorInput(target) {
+    const el = target?.nodeType === 1 ? target : target?.parentElement;
+    if (!el || el.closest?.("[id^='wxdoc-'], #wxov-float-layer")) return false;
+    if (el.id === "melo-hidden-editor") return true;
+    return Boolean(el.isContentEditable && el.closest?.("#root-editable, #sc-page-content, .surface"));
+  }
+  function watchEditing({ onIdle, onEdit } = {}) {
+    let composing = false;
+    let until = 0;
+    let timer = 0;
+    function scheduleIdle() {
+      window.clearTimeout(timer);
+      timer = 0;
+      if (composing) return;
+      timer = window.setTimeout(function() {
+        timer = 0;
+        if (composing) return;
+        if (Date.now() < until) scheduleIdle();
+        else onIdle?.();
+      }, Math.max(0, until - Date.now()));
+    }
+    function onActivity(event) {
+      if (!editorInput(event.target)) return;
+      if (event.type === "keydown") {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+        if (event.key?.length !== 1 && !["Backspace", "Delete", "Enter", "Tab"].includes(event.key)) return;
+      }
+      if (event.type === "compositionstart") composing = true;
+      if (event.type === "compositionend" || event.type === "focusout") composing = false;
+      until = Date.now() + EDIT_IDLE_MS;
+      onEdit?.();
+      scheduleIdle();
+    }
+    const events = ["keydown", "beforeinput", "input", "compositionstart", "compositionupdate", "compositionend", "focusout"];
+    events.forEach((type) => document.addEventListener(type, onActivity, true));
+    return {
+      isEditing() {
+        return composing || Date.now() < until;
+      },
+      dispose() {
+        window.clearTimeout(timer);
+        events.forEach((type) => document.removeEventListener(type, onActivity, true));
+      }
+    };
+  }
+
   // src/shared.js
   var MSG_SOURCE = "wecom-better";
   var REFS_ROOT_ID = "wxdoc-ref-docs";
@@ -107,6 +155,16 @@
   var webLayoutEnabled = true;
   var webLayoutDocId = "";
   var webLayoutUntil = 0;
+  var webLayoutEditedDocId = "";
+  var editing = watchEditing({
+    onIdle: schedulePublish,
+    onEdit() {
+      const path = parseDocPath(location.pathname);
+      if (path?.kind !== "doc") return;
+      webLayoutEditedDocId = path.id;
+      webLayoutUntil = 0;
+    }
+  });
   var WEB_LAYOUT_WINDOW_MS = 8e3;
   var WEB_LAYOUT_SETTLE_MS = 2e3;
   function usersOrNull(value) {
@@ -239,6 +297,10 @@
       return;
     }
     if (primed) return;
+    if (editing.isEditing()) {
+      window.setTimeout(primeViewersIfNeeded, 600);
+      return;
+    }
     const btn = findVisibleCollabButton();
     if (!btn) return;
     primed = true;
@@ -497,6 +559,7 @@
     if (!webLayoutEnabled) return;
     const path = parseDocPath(location.pathname);
     if (!path || path.kind !== "doc") return;
+    if (editing.isEditing() || webLayoutEditedDocId === path.id) return;
     if (webLayoutDocId !== path.id) {
       webLayoutDocId = path.id;
       webLayoutUntil = Date.now() + WEB_LAYOUT_WINDOW_MS;
@@ -522,6 +585,7 @@
     webLayoutEnabled = next;
     if (webLayoutEnabled) {
       webLayoutDocId = "";
+      webLayoutEditedDocId = "";
       schedulePublish();
     }
   }
@@ -579,6 +643,7 @@
     return cleanText(document.title).replace(/\s*[-–—_|]\s*(腾讯文档|企业微信文档|企业微信|微信文档|WeCom|WeChat Work|Tencent Docs)\s*$/i, "").trim();
   }
   function publish() {
+    if (editing.isEditing()) return;
     hookRuntimeUpdates();
     hookEditorUpdates();
     applyWebLayoutIfNeeded();
@@ -1040,7 +1105,7 @@
     mentionActive = false;
     dispatchMention({ active: false });
   }
-  window.__WECOM_BETTER__ = "1.1.1";
+  window.__WECOM_BETTER__ = "1.1.2";
   document.addEventListener(HELLO_EVENT, publish);
   document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
   document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);

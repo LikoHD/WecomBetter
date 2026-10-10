@@ -1,4 +1,5 @@
 import { asMs, fetchCreatorAvatar } from "./search.js";
+import { watchEditing } from "./editing.js";
 import { DOC_META_ROOT_ID, FLOAT_LAYER_ID, copyText, isDocDetailPage, parseDocPath } from "./shared.js";
 
 const ui = {
@@ -10,7 +11,17 @@ const ui = {
   root: null,
   parts: null,
   inset: null,
+  deferred: null,
 };
+
+const editing = watchEditing({
+  onIdle() {
+    if (!ui.deferred) return;
+    const deferred = ui.deferred;
+    ui.deferred = null;
+    if (parseDocPath(location.pathname)?.id === deferred.docId) renderDocMeta(deferred.meta);
+  },
+});
 
 const CANVAS_GAP = 8;
 const META_FALLBACK_H = 26;
@@ -117,22 +128,13 @@ function bindAvatar(btn) {
   });
 }
 
-function findSmartTitleBlock() {
+function findSmartTitle() {
   const title = document.querySelector(
     "#root-editable .sc-text-input-content, #sc-page-content .sc-text-input-content, #root-editable .textInput__pIjhc, #sc-page-content .textInput__pIjhc"
   );
   if (!title || title.closest(`#${DOC_META_ROOT_ID}`)) return null;
-  let node = title.closest(".block-wrapper-padding") || title;
-  while (node.parentElement) {
-    const parent = node.parentElement;
-    if (parent.id === "root-editable" || parent.id === "sc-page-content") break;
-    const siblings = [...parent.children].filter(function (el) {
-      return el.id !== DOC_META_ROOT_ID && el.getBoundingClientRect().height > 8;
-    });
-    if (siblings.length > 1) return node;
-    node = parent;
-  }
-  return node;
+  // 只用标题文字定位。根据兄弟节点高度向上找容器，会在编辑器重绘时选到不同层级。
+  return title;
 }
 
 function dropExtraMeta(keep) {
@@ -267,29 +269,45 @@ function alignDocOverlay(root, anchor) {
   return true;
 }
 
-function alignSmartpage(root, block) {
-  // 之前的插入方式：作为标题块的后一个兄弟节点插入正文流中，随文档原生滚动，不浮层。
+function alignSmartpage(root, title) {
+  const rect = title.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+  const scroll = document.getElementById("sc-scroll-container");
+  const viewport = scroll?.getBoundingClientRect();
+  const floor = Math.max(contentFloor(), viewport?.top || 0);
+  const bottom = Math.min(window.innerHeight, viewport?.bottom ?? window.innerHeight);
+  const left = Math.max(8, viewport?.left || 0, rect.left);
+  const right = Math.min(window.innerWidth - 8, viewport?.right ?? window.innerWidth, rect.right);
+  if (right - left < 40 || rect.top >= bottom || rect.bottom <= floor) return false;
+
+  // 元信息必须在编辑器管理的 DOM 之外。即使 contenteditable=false，插进块列表仍会
+  // 改变原生节点索引、触发编辑器 MutationObserver，并在选区附近增加额外的文本节点。
+  // 固定定位跟随标题，只占用已有的上方留白，不修改正文节点、样式或块间距。
   root.dataset.mode = "smartpage";
-  root.style.position = "";
-  root.style.left = "";
-  root.style.top = "";
-  root.style.width = "";
-  root.style.maxWidth = "";
-  root.style.zIndex = "";
-  if (block.nextSibling !== root) block.insertAdjacentElement("afterend", root);
-  dropExtraMeta(root);
+  root.style.position = "fixed";
+  root.style.left = `${left}px`;
+  root.style.width = "max-content";
+  root.style.maxWidth = `${right - left}px`;
+  root.style.zIndex = "200";
+  attachToHtml(root);
+  const height = root.offsetHeight || META_FALLBACK_H;
+  const top = rect.top - height - CANVAS_GAP;
+  // 标题滚出可见区域或上方没有足够留白时隐藏，不能卡在工具栏下盖住正在编辑的块。
+  if (top < floor) return false;
+  root.style.top = `${top}px`;
   return true;
 }
 
 export function placeDocMeta(root) {
   if (!root) return false;
+  if (editing.isEditing()) return false;
   const kind = parseDocPath(location.pathname)?.kind || "";
   if (kind === "smartpage") {
-    const block = findSmartTitleBlock();
-    if (block?.parentElement) {
-      if (alignSmartpage(root, block)) return markPlaced(root, "smartpage");
+    const title = findSmartTitle();
+    if (title && alignSmartpage(root, title)) {
+      return markPlaced(root, "smartpage");
     }
-    if (keepLastPlace(root, "smartpage")) return true;
+    // 标题可能在页面切换或虚拟化时消失，旧坐标不能继续显示在正文上。
     parkPending(root);
     return false;
   }
@@ -312,6 +330,7 @@ function ensureRoot() {
     root = document.createElement("div");
     root.id = DOC_META_ROOT_ID;
     root.setAttribute("data-empty", "1");
+    root.setAttribute("contenteditable", "false");
   }
   ui.root = root;
   dropExtraMeta(root);
@@ -459,6 +478,7 @@ export function unmountDocMeta() {
   ui.root = null;
   ui.parts = null;
   ui.inset = null;
+  ui.deferred = null;
 }
 
 export function renderDocMeta(meta) {
@@ -468,6 +488,12 @@ export function renderDocMeta(meta) {
   }
 
   const docId = parseDocPath(location.pathname)?.id || "";
+  // 头像请求的异步回调也会直接渲染，不能绕过 content.js 的输入保护。
+  if (editing.isEditing()) {
+    const previous = ui.deferred?.docId === docId ? ui.deferred.meta : null;
+    ui.deferred = { docId, meta: mergeMeta(previous, meta) };
+    return;
+  }
   const existing = heldRoot();
   if (ui.docId && ui.docId !== docId) {
     ui.meta = null;

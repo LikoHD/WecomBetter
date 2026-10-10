@@ -1,4 +1,5 @@
 import { placeDocMeta, renderDocMeta, unmountDocMeta } from "./doc-meta.js";
+import { watchEditing } from "./editing.js";
 import {
   currentPageKey,
   footerLayoutReady,
@@ -53,6 +54,14 @@ let contentReadyFor = "";
 let lastPageKey = "";
 let applyRetryTimer = 0;
 let lastWebLayoutSent = null;
+let pendingApply = false;
+const editing = watchEditing({
+  onIdle() {
+    if (!extensionAlive()) return;
+    if (pendingApply) apply();
+    else onLayout();
+  },
+});
 
 // 把「默认 Web 版式」开关状态告诉 MAIN（chrome.storage 只在 isolated 侧可读）。
 // 只对画布文档生效的判断放在 MAIN，这里只管把开关值传过去。
@@ -79,6 +88,11 @@ function pageContentReady() {
 
 function apply() {
   if (!extensionAlive()) return;
+  if (editing.isEditing()) {
+    pendingApply = true;
+    return;
+  }
+  pendingApply = false;
   const page = currentPageKey();
   if (lastPageKey && lastPageKey !== page) {
     contentReadyFor = "";
@@ -228,6 +242,7 @@ function onSnapshot(event) {
 }
 
 function onLayout() {
+  if (editing.isEditing()) return;
   const page = currentPageKey();
   if (lastPageKey && lastPageKey !== page) {
     apply();

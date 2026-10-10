@@ -1384,6 +1384,54 @@
     if (ui.open) placePanel();
   }
 
+  // src/editing.js
+  var EDIT_IDLE_MS = 500;
+  function editorInput(target) {
+    const el = target?.nodeType === 1 ? target : target?.parentElement;
+    if (!el || el.closest?.("[id^='wxdoc-'], #wxov-float-layer")) return false;
+    if (el.id === "melo-hidden-editor") return true;
+    return Boolean(el.isContentEditable && el.closest?.("#root-editable, #sc-page-content, .surface"));
+  }
+  function watchEditing({ onIdle, onEdit } = {}) {
+    let composing = false;
+    let until = 0;
+    let timer = 0;
+    function scheduleIdle() {
+      window.clearTimeout(timer);
+      timer = 0;
+      if (composing) return;
+      timer = window.setTimeout(function() {
+        timer = 0;
+        if (composing) return;
+        if (Date.now() < until) scheduleIdle();
+        else onIdle?.();
+      }, Math.max(0, until - Date.now()));
+    }
+    function onActivity(event) {
+      if (!editorInput(event.target)) return;
+      if (event.type === "keydown") {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+        if (event.key?.length !== 1 && !["Backspace", "Delete", "Enter", "Tab"].includes(event.key)) return;
+      }
+      if (event.type === "compositionstart") composing = true;
+      if (event.type === "compositionend" || event.type === "focusout") composing = false;
+      until = Date.now() + EDIT_IDLE_MS;
+      onEdit?.();
+      scheduleIdle();
+    }
+    const events = ["keydown", "beforeinput", "input", "compositionstart", "compositionupdate", "compositionend", "focusout"];
+    events.forEach((type) => document.addEventListener(type, onActivity, true));
+    return {
+      isEditing() {
+        return composing || Date.now() < until;
+      },
+      dispose() {
+        window.clearTimeout(timer);
+        events.forEach((type) => document.removeEventListener(type, onActivity, true));
+      }
+    };
+  }
+
   // src/doc-meta.js
   var ui2 = {
     signature: "",
@@ -1393,8 +1441,17 @@
     meta: null,
     root: null,
     parts: null,
-    inset: null
+    inset: null,
+    deferred: null
   };
+  var editing = watchEditing({
+    onIdle() {
+      if (!ui2.deferred) return;
+      const deferred = ui2.deferred;
+      ui2.deferred = null;
+      if (parseDocPath(location.pathname)?.id === deferred.docId) renderDocMeta(deferred.meta);
+    }
+  });
   var CANVAS_GAP = 8;
   var META_FALLBACK_H = 26;
   var avatarCache = /* @__PURE__ */ new Map();
@@ -1486,22 +1543,12 @@
       copyId(btn.dataset.id, btn);
     });
   }
-  function findSmartTitleBlock() {
+  function findSmartTitle() {
     const title = document.querySelector(
       "#root-editable .sc-text-input-content, #sc-page-content .sc-text-input-content, #root-editable .textInput__pIjhc, #sc-page-content .textInput__pIjhc"
     );
     if (!title || title.closest(`#${DOC_META_ROOT_ID}`)) return null;
-    let node = title.closest(".block-wrapper-padding") || title;
-    while (node.parentElement) {
-      const parent = node.parentElement;
-      if (parent.id === "root-editable" || parent.id === "sc-page-content") break;
-      const siblings = [...parent.children].filter(function(el) {
-        return el.id !== DOC_META_ROOT_ID && el.getBoundingClientRect().height > 8;
-      });
-      if (siblings.length > 1) return node;
-      node = parent;
-    }
-    return node;
+    return title;
   }
   function dropExtraMeta(keep) {
     document.querySelectorAll(`#${DOC_META_ROOT_ID}`).forEach(function(el) {
@@ -1610,27 +1657,38 @@
     attachToHtml(root);
     return true;
   }
-  function alignSmartpage(root, block) {
+  function alignSmartpage(root, title) {
+    const rect = title.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const scroll = document.getElementById("sc-scroll-container");
+    const viewport = scroll?.getBoundingClientRect();
+    const floor = Math.max(contentFloor(), viewport?.top || 0);
+    const bottom = Math.min(window.innerHeight, viewport?.bottom ?? window.innerHeight);
+    const left = Math.max(8, viewport?.left || 0, rect.left);
+    const right = Math.min(window.innerWidth - 8, viewport?.right ?? window.innerWidth, rect.right);
+    if (right - left < 40 || rect.top >= bottom || rect.bottom <= floor) return false;
     root.dataset.mode = "smartpage";
-    root.style.position = "";
-    root.style.left = "";
-    root.style.top = "";
-    root.style.width = "";
-    root.style.maxWidth = "";
-    root.style.zIndex = "";
-    if (block.nextSibling !== root) block.insertAdjacentElement("afterend", root);
-    dropExtraMeta(root);
+    root.style.position = "fixed";
+    root.style.left = `${left}px`;
+    root.style.width = "max-content";
+    root.style.maxWidth = `${right - left}px`;
+    root.style.zIndex = "200";
+    attachToHtml(root);
+    const height = root.offsetHeight || META_FALLBACK_H;
+    const top = rect.top - height - CANVAS_GAP;
+    if (top < floor) return false;
+    root.style.top = `${top}px`;
     return true;
   }
   function placeDocMeta(root) {
     if (!root) return false;
+    if (editing.isEditing()) return false;
     const kind = parseDocPath(location.pathname)?.kind || "";
     if (kind === "smartpage") {
-      const block = findSmartTitleBlock();
-      if (block?.parentElement) {
-        if (alignSmartpage(root, block)) return markPlaced(root, "smartpage");
+      const title2 = findSmartTitle();
+      if (title2 && alignSmartpage(root, title2)) {
+        return markPlaced(root, "smartpage");
       }
-      if (keepLastPlace(root, "smartpage")) return true;
       parkPending(root);
       return false;
     }
@@ -1649,6 +1707,7 @@
       root = document.createElement("div");
       root.id = DOC_META_ROOT_ID;
       root.setAttribute("data-empty", "1");
+      root.setAttribute("contenteditable", "false");
     }
     ui2.root = root;
     dropExtraMeta(root);
@@ -1778,6 +1837,7 @@
     ui2.root = null;
     ui2.parts = null;
     ui2.inset = null;
+    ui2.deferred = null;
   }
   function renderDocMeta(meta) {
     if (!isDocDetailPage()) {
@@ -1785,6 +1845,11 @@
       return;
     }
     const docId = parseDocPath(location.pathname)?.id || "";
+    if (editing.isEditing()) {
+      const previous = ui2.deferred?.docId === docId ? ui2.deferred.meta : null;
+      ui2.deferred = { docId, meta: mergeMeta(previous, meta) };
+      return;
+    }
     const existing = heldRoot();
     if (ui2.docId && ui2.docId !== docId) {
       ui2.meta = null;
@@ -4044,6 +4109,14 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   var lastPageKey = "";
   var applyRetryTimer = 0;
   var lastWebLayoutSent = null;
+  var pendingApply = false;
+  var editing2 = watchEditing({
+    onIdle() {
+      if (!extensionAlive()) return;
+      if (pendingApply) apply();
+      else onLayout();
+    }
+  });
   function syncWebLayout() {
     const enabled = features.webLayout !== false;
     if (enabled === lastWebLayoutSent) return;
@@ -4065,6 +4138,11 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
   }
   function apply() {
     if (!extensionAlive()) return;
+    if (editing2.isEditing()) {
+      pendingApply = true;
+      return;
+    }
+    pendingApply = false;
     const page = currentPageKey();
     if (lastPageKey && lastPageKey !== page) {
       contentReadyFor = "";
@@ -4187,6 +4265,7 @@ ${v.avatar}`).join("|")}#${viewers.length}/${total}`;
     apply();
   }
   function onLayout() {
+    if (editing2.isEditing()) return;
     const page = currentPageKey();
     if (lastPageKey && lastPageKey !== page) {
       apply();

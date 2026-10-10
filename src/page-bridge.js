@@ -2,6 +2,7 @@
  * MAIN world 源码（构建成 IIFE）。
  * 采集页面对象并派发快照，不画 UI，不碰 chrome.*。
  */
+import { watchEditing } from "./editing.js";
 import {
   CREATE_PLUS_ID,
   DOC_META_ROOT_ID,
@@ -42,6 +43,17 @@ let hookedEditor = false;
 let webLayoutEnabled = true;
 let webLayoutDocId = "";
 let webLayoutUntil = 0;
+let webLayoutEditedDocId = "";
+
+const editing = watchEditing({
+  onIdle: schedulePublish,
+  onEdit() {
+    const path = parseDocPath(location.pathname);
+    if (path?.kind !== "doc") return;
+    webLayoutEditedDocId = path.id;
+    webLayoutUntil = 0;
+  },
+});
 
 const WEB_LAYOUT_WINDOW_MS = 8000;
 const WEB_LAYOUT_SETTLE_MS = 2000;
@@ -198,6 +210,11 @@ function primeViewersIfNeeded() {
     return;
   }
   if (primed) return;
+  // 加载成员面板需要模拟点击，不能在打字或输入法选词时抢走编辑上下文。
+  if (editing.isEditing()) {
+    window.setTimeout(primeViewersIfNeeded, 600);
+    return;
+  }
   const btn = findVisibleCollabButton();
   if (!btn) return;
   primed = true;
@@ -490,6 +507,7 @@ function applyWebLayoutIfNeeded() {
   if (!webLayoutEnabled) return;
   const path = parseDocPath(location.pathname);
   if (!path || path.kind !== "doc") return;
+  if (editing.isEditing() || webLayoutEditedDocId === path.id) return;
   if (webLayoutDocId !== path.id) {
     webLayoutDocId = path.id;
     webLayoutUntil = Date.now() + WEB_LAYOUT_WINDOW_MS;
@@ -517,6 +535,7 @@ function onWebLayoutMessage(event) {
   webLayoutEnabled = next;
   if (webLayoutEnabled) {
     webLayoutDocId = "";
+    webLayoutEditedDocId = "";
     schedulePublish();
   }
 }
@@ -593,6 +612,8 @@ function collectDocTitle() {
 }
 
 function publish() {
+  // 等原生输入事务和 IME 提交完成，再扫描文本流、布局树和刷新附加 UI。
+  if (editing.isEditing()) return;
   hookRuntimeUpdates();
   hookEditorUpdates();
   applyWebLayoutIfNeeded();
@@ -1106,7 +1127,7 @@ function onInsertDoc(event) {
   dispatchMention({ active: false });
 }
 
-window.__WECOM_BETTER__ = "1.1.1";
+window.__WECOM_BETTER__ = "1.1.2";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
 document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
