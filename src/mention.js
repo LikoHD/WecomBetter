@@ -662,6 +662,7 @@ function move(step) {
 
 function onKeyDown(event) {
   if (!ui.open) return;
+  if (event.isComposing || event.keyCode === 229) return;
   if (event.key === "ArrowDown") {
     event.preventDefault();
     event.stopPropagation();

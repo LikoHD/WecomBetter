@@ -756,6 +756,7 @@
   var savedMention = null;
   var forgetMentionTimer = 0;
   var meloCaretTimer = 0;
+  var meloModelTimer = 0;
   var lastMeloCaret = "";
   function mentionFromText(node, offset) {
     if (!node || node.nodeType !== Node.TEXT_NODE) return null;
@@ -781,6 +782,8 @@
     if (!sel || !sel.isCollapsed || !sel.rangeCount) return null;
     const range = sel.getRangeAt(0);
     const node = range.startContainer;
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    if (el?.closest(`#${MELO_INPUT_ID}`)) return null;
     if (node.nodeType === Node.TEXT_NODE) return mentionFromText(node, range.startOffset);
     if (node.nodeType === 1 && range.startOffset > 0) {
       const prev = node.childNodes[range.startOffset - 1];
@@ -788,9 +791,9 @@
     }
     return null;
   }
-  function meloEditor() {
+  function meloEditor(requireFocus = true) {
     const input = document.getElementById(MELO_INPUT_ID);
-    if (!input || document.activeElement !== input) return null;
+    if (!input || requireFocus && document.activeElement !== input) return null;
     const state = window.pad?.editor?._state;
     const pool = state?.getTextStream?.()?.textPool;
     if (!pool || typeof pool.subText !== "function" || typeof state.moveTo !== "function") return null;
@@ -822,18 +825,22 @@
     return readMentionFromSelection() || readMentionFromMelo();
   }
   function locateMelo(captured) {
-    const melo = meloEditor();
-    if (!melo || !captured?.text) return null;
-    const from = Math.max(0, captured.start - 200);
-    const size = Number(melo.pool.size?.()) || 0;
-    const data = String(melo.pool.subText(from, Math.max(0, Math.min(400 + captured.text.length, size - from))) || "");
-    const at = nearestIndex(data, captured.text, captured.start - from);
-    if (at < 0) return null;
-    return { melo, start: from + at, len: captured.text.length };
+    const melo = meloEditor(false);
+    if (!melo || !captured?.text || captured.docId !== parseDocPath(location.pathname)?.id) return null;
+    if (String(melo.pool.subText(captured.start, captured.text.length)) !== captured.text) return null;
+    const range = melo.state.selection?.gcpRange;
+    const end = captured.start + captured.text.length;
+    if (!range || !(range.len === 0 && range.gcpBegin === end || range.gcpBegin === captured.start && range.len === captured.text.length)) return null;
+    return { melo, start: captured.start, len: captured.text.length };
   }
   function selectMeloMention(captured) {
     const located = locateMelo(captured);
-    if (located) located.melo.state.moveTo(located.start, located.len);
+    if (!located) return null;
+    located.melo.input.focus({ preventScroll: true });
+    located.melo.state.moveTo(located.start, located.len);
+    const range = located.melo.state.selection?.gcpRange;
+    if (range?.gcpBegin !== located.start || range.len !== located.len) return null;
+    return located.melo;
   }
   function dispatchMention(detail) {
     document.dispatchEvent(
@@ -844,7 +851,7 @@
     );
   }
   function captureOf(hit) {
-    if (hit.melo) return { melo: true, start: hit.start, text: hit.text };
+    if (hit.melo) return { melo: true, start: hit.start, text: hit.text, docId: parseDocPath(location.pathname)?.id };
     return {
       node: hit.node,
       start: hit.start,
@@ -941,7 +948,14 @@
       deleteCapturedMention(typed);
     }, 80);
   }
-  function scheduleMention() {
+  function scheduleMention(event) {
+    if (event?.target?.id === MELO_INPUT_ID) {
+      window.clearTimeout(meloModelTimer);
+      meloModelTimer = window.setTimeout(function() {
+        meloModelTimer = 0;
+        publishMention();
+      }, MELO_CARET_SETTLE_MS);
+    }
     if (mentionTimer) return;
     mentionTimer = window.setTimeout(function() {
       mentionTimer = 0;
@@ -1088,8 +1102,28 @@
     const title = String(detail.title || "").trim();
     if (!parseDocUrl(url)) return;
     const typed = mentionTarget();
-    if (typed?.melo) selectMeloMention(typed);
-    else if (typed) {
+    if (typed?.melo) {
+      const melo = selectMeloMention(typed);
+      if (!melo) return;
+      const clipboard = window.pad?.editor?.clipboardManager;
+      if (typeof clipboard?.pasteFromDirectCall === "function") {
+        try {
+          const result = clipboard.pasteFromDirectCall(
+            `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`,
+            url,
+            void 0,
+            { isKeepTargetStyle: true }
+          );
+          if (!result?.success) return;
+        } catch {
+          return;
+        }
+        savedMention = null;
+        mentionActive = false;
+        dispatchMention({ active: false });
+        return;
+      }
+    } else if (typed) {
       armMention(typed, false);
       deleteCapturedMention(typed);
     }
@@ -1105,7 +1139,7 @@
     mentionActive = false;
     dispatchMention({ active: false });
   }
-  window.__WECOM_BETTER__ = "1.1.2";
+  window.__WECOM_BETTER__ = "1.1.3";
   document.addEventListener(HELLO_EVENT, publish);
   document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
   document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
