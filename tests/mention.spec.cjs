@@ -88,15 +88,22 @@ for (const change of ['caret', 'text', 'document', 'range', 'permission']) {
   });
 }
 
-test('mention panel leaves IME keys alone while supporting normal keyboard selection', async ({ page }) => {
-  await openCanvas(page);
-  await page.route('https://doc.weixin.qq.com/diskfile/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ head: { ret: 0 }, body: { files: [{ doc_id: 'target-document', doc_url: url, name: '输入文档' }] } }) }));
+async function openMentionPanel(page, files, count) {
+  await page.route('https://doc.weixin.qq.com/diskfile/**', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ head: { ret: 0 }, body: { files } }),
+  }));
   await page.evaluate(() => {
     window.chrome = { runtime: { id: 'test-extension' }, storage: { sync: { get: async defaults => defaults }, local: { get: async defaults => defaults, set: async () => {} }, onChanged: { addListener() {} } } };
   });
   await page.addScriptTag({ path: path.join(repo, 'dist/content.iife.js') });
   await page.evaluate(() => document.dispatchEvent(new Event('selectionchange')));
-  await expect(page.locator('#wxdoc-mention-docs .wxmd-item')).toHaveCount(1);
+  await expect(page.locator('#wxdoc-mention-docs .wxmd-item')).toHaveCount(count);
+}
+
+test('mention panel leaves IME keys alone while supporting normal keyboard selection', async ({ page }) => {
+  await openCanvas(page);
+  await openMentionPanel(page, [{ doc_id: 'target-document', doc_url: url, name: '输入文档' }], 1);
   const composing = await page.evaluate(() => ['ArrowDown', 'ArrowUp', 'Enter'].map(key => {
     const e = new KeyboardEvent('keydown', { key, isComposing: true, bubbles: true, cancelable: true });
     document.getElementById('melo-hidden-editor').dispatchEvent(e);
@@ -234,13 +241,7 @@ const pickDocs = [
 
 async function openSmartCanvasPanel(page) {
   await openSmartCanvas(page);
-  await page.route('https://doc.weixin.qq.com/diskfile/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ head: { ret: 0 }, body: { files: pickDocs } }) }));
-  await page.evaluate(() => {
-    window.chrome = { runtime: { id: 'test-extension' }, storage: { sync: { get: async defaults => defaults }, local: { get: async defaults => defaults, set: async () => {} }, onChanged: { addListener() {} } } };
-  });
-  await page.addScriptTag({ path: path.join(repo, 'dist/content.iife.js') });
-  await page.evaluate(() => document.dispatchEvent(new Event('selectionchange')));
-  await expect(page.locator('#wxdoc-mention-docs .wxmd-item')).toHaveCount(2);
+  await openMentionPanel(page, pickDocs, 2);
 }
 
 test('smart canvas inserts the doc picked with arrow keys and Enter', async ({ page }) => {

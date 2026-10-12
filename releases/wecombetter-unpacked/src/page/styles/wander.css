@@ -1,0 +1,116 @@
+#wxdoc-wander-docs .wxwd-head {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 0 4px;
+  border-bottom: 1px solid rgba(31, 35, 41, 0.08);
+}
+
+#wxdoc-wander-docs .wxwd-head-title {
+  position: relative;
+  padding: 10px 2px;
+  color: #336df4;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+}
+
+#wxdoc-wander-docs .wxwd-head-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #336df4;
+  border-radius: 1px;
+}
+
+#wxdoc-wander-docs .wxwd-refresh {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #8f959e;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#wxdoc-wander-docs .wxwd-refresh:hover {
+  color: #646a73;
+}
+
+#wxdoc-wander-docs .wxwd-refresh:focus-visible {
+  outline: 2px solid rgba(51, 109, 244, 0.45);
+  outline-offset: 1px;
+}
+
+#wxdoc-wander-docs .wxwd-refresh-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+#wxdoc-wander-docs .wxwd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#wxdoc-wander-docs .wxwd-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: #1f2329;
+  text-decoration: none;
+  overflow: visible;
+}
+
+#wxdoc-wander-docs .wxwd-item:hover {
+  background: rgba(31, 35, 41, 0.04);
+}
+
+#wxdoc-wander-docs .wxwd-item:focus-visible {
+  outline: 2px solid rgba(51, 109, 244, 0.45);
+  outline-offset: 1px;
+}
+
+#wxdoc-wander-docs .wxwd-icon,
+#wxdoc-wander-docs .wxrd-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 0;
+  display: block;
+}
+
+#wxdoc-wander-docs .wxwd-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 22px;
+}
+
+#wxdoc-wander-docs .wxwd-status {
+  padding: 4px 6px;
+  color: rgba(31, 35, 41, 0.45);
+  font-size: 13px;
+  line-height: 22px;
+}

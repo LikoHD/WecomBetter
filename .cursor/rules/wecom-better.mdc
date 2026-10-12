@@ -22,6 +22,15 @@ Manifest 里声明的 content script（MAIN / ISOLATED）都是经典脚本，**
 - `src/popup/*`：扩展页，可用 `<script type="module">`
 - `src/background/service-worker.js`：可用 `"type": "module"`
 
+## 收尾必做发版打包
+
+每轮改动结束（用户说「保存」时）跑 `npm run release`，`releases/` 只保留两份：
+
+- `releases/wecombetter-<version>.zip` —— 上传 Chrome 应用商店
+- `releases/wecombetter-unpacked/` —— `chrome://extensions` 加载已解压的扩展程序，路径固定，改完点「重新加载」即可
+
+包内只有运行时文件，不含 `docs/`、`website/`、`tests/`、`store-shots/`、`assets/`。清单由 `scripts/release.sh` 从 `manifest.json` 推导，新挂的 CSS / JS 会自动进包；发版时 `manifest.json` / `package.json` / `README.md` / `src/page-bridge.js` 的版本号要一起改（脚本会 warn）。
+
 ## 禁止
 
 - 不要给 `content_scripts` 加 `"type": "module"`

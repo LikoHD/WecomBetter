@@ -1,0 +1,78 @@
+#wxdoc-titlebar-tools {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  flex: 0 1 482px;
+  width: 482px;
+  max-width: 482px;
+  min-width: 0;
+  height: 32px;
+  margin: 12px 80px 0 0;
+  gap: 4px;
+  position: relative;
+  z-index: 3;
+}
+
+/* 加号关掉后，搜索会从工具容器里拆出来，直接挂在顶栏。
+   必须自己占住宽度；以前靠给 #headerbar-member 加 562px 左边距占位，
+   搜索已经在文档流里时再加这段边距，会把分享/头像挤出屏幕。 */
+#workbench-titlebar > #wxdoc-quick-search:not(.is-home) {
+  align-self: flex-start;
+  flex: 0 1 450px;
+  width: 450px;
+  max-width: 450px;
+  margin: 12px 80px 0 0;
+}
+
+#workbench-titlebar > #wxdoc-create-plus {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
+#wxdoc-create-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8f959e;
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+#wxdoc-create-plus:hover,
+#wxdoc-create-plus:focus-visible {
+  color: #646a73;
+  background: rgba(31, 35, 41, 0.06);
+  outline: none;
+}
+
+#wxdoc-create-plus.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#wxdoc-create-plus:active {
+  transform: scale(0.96);
+}
+
+#wxdoc-create-plus .wxcr-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+[data-wecom-better-hide] {
+  display: none !important;
+}

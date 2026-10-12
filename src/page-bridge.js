@@ -866,7 +866,7 @@ function canvasText(title) {
 
 // 页面上读到的 @ 关键字必须和模型里光标前的文字对得上，才按模型位置替换。
 function canvasMentionRange(canvas, captured) {
-  const text = String(captured?.text || "").replace(/[\u200b-\u200d\u2060\ufeff]/g, "");
+  const text = cleanText(captured?.text);
   const selection = canvas.selection?.multiSelection;
   const store = selection?.start?.store;
   if (!text.startsWith("@") || !store || selection.end?.store !== store) return null;

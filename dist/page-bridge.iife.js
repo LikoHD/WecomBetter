@@ -864,7 +864,7 @@
     return text;
   }
   function canvasMentionRange(canvas, captured) {
-    const text = String(captured?.text || "").replace(/[\u200b-\u200d\u2060\ufeff]/g, "");
+    const text = cleanText(captured?.text);
     const selection = canvas.selection?.multiSelection;
     const store = selection?.start?.store;
     if (!text.startsWith("@") || !store || selection.end?.store !== store) return null;

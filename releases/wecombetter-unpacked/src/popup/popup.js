@@ -1,0 +1,33 @@
+import { FEATURE_IDS, readFeatures, writeFeatures } from "../shared.js";
+
+const toggles = {
+  [FEATURE_IDS.search]: document.getElementById("toggle-search"),
+  [FEATURE_IDS.viewers]: document.getElementById("toggle-viewers"),
+  [FEATURE_IDS.refs]: document.getElementById("toggle-refs"),
+  [FEATURE_IDS.docMeta]: document.getElementById("toggle-doc-meta"),
+  [FEATURE_IDS.webLayout]: document.getElementById("toggle-web-layout"),
+  [FEATURE_IDS.create]: document.getElementById("toggle-create"),
+  [FEATURE_IDS.mention]: document.getElementById("toggle-mention"),
+};
+
+function paint(features) {
+  for (const [id, input] of Object.entries(toggles)) {
+    if (input) input.checked = features[id] !== false;
+  }
+}
+
+async function persist() {
+  const next = {};
+  for (const [id, input] of Object.entries(toggles)) {
+    next[id] = Boolean(input?.checked);
+  }
+  paint(await writeFeatures(next));
+}
+
+document.querySelector(".ver").textContent = chrome.runtime.getManifest().version;
+
+const features = await readFeatures();
+paint(features);
+for (const input of Object.values(toggles)) {
+  input?.addEventListener("change", persist);
+}
