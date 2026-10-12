@@ -107,3 +107,28 @@ test('mention panel leaves IME keys alone while supporting normal keyboard selec
   await page.keyboard.press('Enter');
   expect(await page.evaluate(() => text)).toBe('前文 [文档链接] 后文\r');
 });
+
+// 智能文档走 DOM 选区：这里没有 window.pad，只能插纯文本。
+// 关键是不能用合成 paste —— 企微的粘贴处理器不认 clipboardData，转去读系统剪贴板，
+// 插进来的会是用户刚复制的那篇文档，而不是列表里选的那篇。
+test('page without a direct paste entry inserts the selected url as text, never a synthetic paste', async ({ page }) => {
+  await page.route('https://doc.weixin.qq.com/**', route => route.fulfill({
+    contentType: 'text/html', body: '<!doctype html><div id="root-editable" contenteditable="true">前文 @输入</div>',
+  }));
+  await page.goto('https://doc.weixin.qq.com/smartpage/mention-regression');
+  await page.evaluate(() => {
+    window.pastes = 0;
+    document.addEventListener('paste', () => { window.pastes += 1; }, true);
+    const node = document.getElementById('root-editable').firstChild;
+    const range = document.createRange();
+    range.setStart(node, node.data.length);
+    range.collapse(true);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+  });
+  await page.addScriptTag({ path: path.join(repo, 'dist/page-bridge.iife.js') });
+  await insert(page);
+  expect(await page.evaluate(() => window.pastes)).toBe(0);
+  expect(await page.evaluate(() => document.getElementById('root-editable').textContent)).toContain(url);
+});
+

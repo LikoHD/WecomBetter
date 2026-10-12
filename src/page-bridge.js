@@ -1087,36 +1087,43 @@ function deleteCapturedMention(captured) {
   return !leftoverMention(captured);
 }
 
-function pasteTarget() {
-  const sel = document.getSelection();
-  const node = sel && sel.anchorNode;
-  const el = node && (node.nodeType === 1 ? node : node.parentElement);
-  if (el && editorLike(el)) return el;
-  const active = document.activeElement;
-  if (active && active.nodeType === 1 && editorLike(active)) return active;
-  return el || document.body;
-}
-
 function editorLike(el) {
   return Boolean(
     el.closest("#zoomable-container, #root-editable, #sc-page-content, #melo-container, .surface, [contenteditable='true']")
   );
 }
 
-// 开放平台的 batch_update 改不到当前光标。这里走页面自己的粘贴识别：
-// 企微会把 doc.weixin.qq.com 链接收成文档卡片或超链接。
-function pasteDocLink(url, title) {
-  const data = new DataTransfer();
-  data.setData("text/plain", url);
-  data.setData("text/html", `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`);
-  const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+function docLinkHtml(url, title) {
+  return `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`;
+}
+
+// 合成 paste 只是把事件交给页面自己的粘贴流程：企微的处理器不认 event.clipboardData，
+// 转头去读系统剪贴板，插进来的就成了用户刚复制的那篇文档。内容必须由参数交给编辑器，
+// 这个入口还保留原生权限检查、撤销和文档链接识别。
+function pasteLinkDirect(url, title) {
+  const clipboard = window.pad?.editor?.clipboardManager;
+  if (typeof clipboard?.pasteFromDirectCall !== "function") return false;
   try {
-    Object.defineProperty(event, "clipboardData", { value: data });
+    const result = clipboard.pasteFromDirectCall(
+      docLinkHtml(url, title),
+      url,
+      undefined,
+      { isKeepTargetStyle: true }
+    );
+    return Boolean(result?.success);
   } catch {
     return false;
   }
-  if (!event.clipboardData) return false;
-  return pasteTarget().dispatchEvent(event) === false;
+}
+
+// 没有直接粘贴入口时插纯文本。开放平台的 batch_update 改不到当前光标，
+// 但编辑器自己会把 doc.weixin.qq.com 链接收成文档卡片或超链接，id 至少是对的。
+function insertLinkText(url) {
+  try {
+    return document.execCommand("insertText", false, url);
+  } catch {
+    return false;
+  }
 }
 
 function onInsertDoc(event) {
@@ -1126,38 +1133,19 @@ function onInsertDoc(event) {
   const title = String(detail.title || "").trim();
   if (!parseDocUrl(url)) return;
   const typed = mentionTarget();
-  if (typed?.melo) {
-    const melo = selectMeloMention(typed);
-    if (!melo) return;
-    const clipboard = window.pad?.editor?.clipboardManager;
-    // 普通文档的合成 paste 会被取消，但并不代表内容已写入。走编辑器提供的
-    // 直接粘贴入口，保留原生权限检查、撤销和文档链接识别，不读写系统剪贴板。
-    if (typeof clipboard?.pasteFromDirectCall === "function") {
-      try {
-        const result = clipboard.pasteFromDirectCall(
-          `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`,
-          url, undefined, { isKeepTargetStyle: true }
-        );
-        if (!result?.success) return;
-      } catch {
-        return;
-      }
-      savedMention = null;
-      mentionActive = false;
-      dispatchMention({ active: false });
-      return;
-    }
-  } else if (typed) {
+  // 普通文档要先选中文本流里的 @ 关键字，直接粘贴才会整段换成文档链接；
+  // 选不中就整个放弃，换成别的方式只会在错误的位置留下一段链接。
+  if (typed?.melo && !selectMeloMention(typed)) return;
+  if (typed && !typed.melo) {
     armMention(typed, false);
     deleteCapturedMention(typed);
   }
-  const pasted = pasteDocLink(url, title);
-  if (!pasted) {
-    try {
-      document.execCommand("insertText", false, url);
-    } catch {
-      /* 编辑器不接受 insertText */
-    }
+  // 普通文档交给编辑器自己的粘贴入口，它自己拒绝（只读、权限外）就不硬插；
+  // 智能文档这类没有这个入口，只能插纯文本，由编辑器把链接认成卡片或超链接。
+  if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
+    pasteLinkDirect(url, title);
+  } else {
+    insertLinkText(url);
   }
   if (typed && !typed.melo) deleteCapturedMention(typed);
   savedMention = null;
@@ -1165,7 +1153,7 @@ function onInsertDoc(event) {
   dispatchMention({ active: false });
 }
 
-window.__WECOM_BETTER__ = "1.1.3";
+window.__WECOM_BETTER__ = "1.1.4";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
 document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);

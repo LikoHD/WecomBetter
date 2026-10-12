@@ -1068,32 +1068,35 @@
     }
     return !leftoverMention(captured);
   }
-  function pasteTarget() {
-    const sel = document.getSelection();
-    const node = sel && sel.anchorNode;
-    const el = node && (node.nodeType === 1 ? node : node.parentElement);
-    if (el && editorLike(el)) return el;
-    const active = document.activeElement;
-    if (active && active.nodeType === 1 && editorLike(active)) return active;
-    return el || document.body;
-  }
   function editorLike(el) {
     return Boolean(
       el.closest("#zoomable-container, #root-editable, #sc-page-content, #melo-container, .surface, [contenteditable='true']")
     );
   }
-  function pasteDocLink(url, title) {
-    const data = new DataTransfer();
-    data.setData("text/plain", url);
-    data.setData("text/html", `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`);
-    const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+  function docLinkHtml(url, title) {
+    return `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`;
+  }
+  function pasteLinkDirect(url, title) {
+    const clipboard = window.pad?.editor?.clipboardManager;
+    if (typeof clipboard?.pasteFromDirectCall !== "function") return false;
     try {
-      Object.defineProperty(event, "clipboardData", { value: data });
+      const result = clipboard.pasteFromDirectCall(
+        docLinkHtml(url, title),
+        url,
+        void 0,
+        { isKeepTargetStyle: true }
+      );
+      return Boolean(result?.success);
     } catch {
       return false;
     }
-    if (!event.clipboardData) return false;
-    return pasteTarget().dispatchEvent(event) === false;
+  }
+  function insertLinkText(url) {
+    try {
+      return document.execCommand("insertText", false, url);
+    } catch {
+      return false;
+    }
   }
   function onInsertDoc(event) {
     const detail = event.detail;
@@ -1102,44 +1105,22 @@
     const title = String(detail.title || "").trim();
     if (!parseDocUrl(url)) return;
     const typed = mentionTarget();
-    if (typed?.melo) {
-      const melo = selectMeloMention(typed);
-      if (!melo) return;
-      const clipboard = window.pad?.editor?.clipboardManager;
-      if (typeof clipboard?.pasteFromDirectCall === "function") {
-        try {
-          const result = clipboard.pasteFromDirectCall(
-            `<a href="${escapeHtml(url)}">${escapeHtml(title || url)}</a>`,
-            url,
-            void 0,
-            { isKeepTargetStyle: true }
-          );
-          if (!result?.success) return;
-        } catch {
-          return;
-        }
-        savedMention = null;
-        mentionActive = false;
-        dispatchMention({ active: false });
-        return;
-      }
-    } else if (typed) {
+    if (typed?.melo && !selectMeloMention(typed)) return;
+    if (typed && !typed.melo) {
       armMention(typed, false);
       deleteCapturedMention(typed);
     }
-    const pasted = pasteDocLink(url, title);
-    if (!pasted) {
-      try {
-        document.execCommand("insertText", false, url);
-      } catch {
-      }
+    if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
+      pasteLinkDirect(url, title);
+    } else {
+      insertLinkText(url);
     }
     if (typed && !typed.melo) deleteCapturedMention(typed);
     savedMention = null;
     mentionActive = false;
     dispatchMention({ active: false });
   }
-  window.__WECOM_BETTER__ = "1.1.3";
+  window.__WECOM_BETTER__ = "1.1.4";
   document.addEventListener(HELLO_EVENT, publish);
   document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
   document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
