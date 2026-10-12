@@ -1242,7 +1242,7 @@ function onInsertDoc(event) {
   dispatchMention({ active: false });
 }
 
-window.__WECOM_BETTER__ = "1.1.4";
+window.__WECOM_BETTER__ = "1.1.5";
 document.addEventListener(HELLO_EVENT, publish);
 document.addEventListener(WEB_LAYOUT_EVENT, onWebLayoutMessage);
 document.addEventListener(INSERT_DOC_EVENT, onInsertDoc);
