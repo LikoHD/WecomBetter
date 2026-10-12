@@ -835,6 +835,90 @@ function selectMeloMention(captured) {
   return located.melo;
 }
 
+// 智能文档的编辑器服务注册在页面的依赖注入容器里，window.__getInstance 按名字取实例。
+function smartCanvas() {
+  const get = window.__getInstance;
+  if (typeof get !== "function") return null;
+  try {
+    const canvas = {
+      selection: get("TextSelectionStore"),
+      trigger: get("CharTriggerController"),
+      link: get("LinkController"),
+      data: get("DataService"),
+    };
+    const ready =
+      typeof canvas.link?.insertLinkFromDialog === "function" &&
+      typeof canvas.link.updateLinkInfoByApi === "function" &&
+      typeof canvas.trigger?.endTrigger === "function" &&
+      typeof canvas.data?.dispatch === "function";
+    return ready ? canvas : null;
+  } catch {
+    return null;
+  }
+}
+
+// 块内容是 [文字, 格式] 片段数组，链接、提及这类内嵌元素各占一个占位字符。
+function canvasText(title) {
+  let text = "";
+  for (const token of Array.from(title || [])) text += String(token?.[0] ?? "");
+  return text;
+}
+
+// 页面上读到的 @ 关键字必须和模型里光标前的文字对得上，才按模型位置替换。
+function canvasMentionRange(canvas, captured) {
+  const text = String(captured?.text || "").replace(/[\u200b-\u200d\u2060\ufeff]/g, "");
+  const selection = canvas.selection?.multiSelection;
+  const store = selection?.start?.store;
+  if (!text.startsWith("@") || !store || selection.end?.store !== store) return null;
+  const end = Number(selection.end.index);
+  const start = end - text.length;
+  if (Number(selection.start.index) !== end || start < 0) return null;
+  if (canvasText(store.title).slice(start, end) !== text) return null;
+  return { store, start, end, text };
+}
+
+// execCommand 插进 DOM 的文字不会进智能文档的模型，既不保存也不同步。
+// 这里照编辑器自己「插入链接」的流程走：先把 @ 关键字整段换成链接，再补拉文档信息，
+// 补到文档类型后链接才显示成带文档图标的原生样式，否则只是通用链接图标。
+function insertCanvasLink(canvas, captured, url, title) {
+  const range = canvasMentionRange(canvas, captured);
+  if (!range) return false;
+  const { store, start, end } = range;
+  const name = title || url;
+  // 结束 @ 触发，编辑器会随之收起原生联系人面板。
+  canvas.trigger.endTrigger();
+  let quoted = false;
+  try {
+    canvas.data.dispatch(function (command) {
+      quoted = canvas.link.insertLinkFromDialog({
+        selection: { start: { store, index: start }, end: { store, index: end } },
+        text: name,
+        link: url,
+        command,
+      });
+    });
+  } catch {
+    return false;
+  }
+  if (canvasText(store.title).slice(start, end) === range.text) return false;
+  // 返回 true 时插入的是页面引用，编辑器会自己转换，不用补拉。
+  if (quoted) return true;
+  window.setTimeout(async function () {
+    try {
+      await canvas.link.updateLinkInfoByApi({
+        type: "IconLink",
+        linkUrl: url,
+        linkName: name,
+        store,
+        selection: { startIndex: start, endIndex: start + 1 },
+      });
+    } catch {
+      /* 拉不到文档信息时保留通用链接图标 */
+    }
+  }, 0);
+  return true;
+}
+
 function dispatchMention(detail) {
   document.dispatchEvent(
     new CustomEvent(MENTION_EVENT, {
@@ -1116,8 +1200,8 @@ function pasteLinkDirect(url, title) {
   }
 }
 
-// 没有直接粘贴入口时插纯文本。开放平台的 batch_update 改不到当前光标，
-// 但编辑器自己会把 doc.weixin.qq.com 链接收成文档卡片或超链接，id 至少是对的。
+// 两种编辑器入口都找不到时只能插纯文本。开放平台的 batch_update 改不到当前光标，
+// 插纯文本至少文档地址是对的。
 function insertLinkText(url) {
   try {
     return document.execCommand("insertText", false, url);
@@ -1136,18 +1220,23 @@ function onInsertDoc(event) {
   // 普通文档要先选中文本流里的 @ 关键字，直接粘贴才会整段换成文档链接；
   // 选不中就整个放弃，换成别的方式只会在错误的位置留下一段链接。
   if (typed?.melo && !selectMeloMention(typed)) return;
-  if (typed && !typed.melo) {
-    armMention(typed, false);
-    deleteCapturedMention(typed);
-  }
-  // 普通文档交给编辑器自己的粘贴入口，它自己拒绝（只读、权限外）就不硬插；
-  // 智能文档这类没有这个入口，只能插纯文本，由编辑器把链接认成卡片或超链接。
-  if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
-    pasteLinkDirect(url, title);
+  const canvas = typed?.melo ? null : smartCanvas();
+  if (canvas) {
+    // 智能文档同理：模型里对不上 @ 关键字就不插。
+    if (!insertCanvasLink(canvas, typed, url, title)) return;
   } else {
-    insertLinkText(url);
+    if (typed && !typed.melo) {
+      armMention(typed, false);
+      deleteCapturedMention(typed);
+    }
+    // 普通文档交给编辑器自己的粘贴入口，它自己拒绝（只读、权限外）就不硬插。
+    if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
+      pasteLinkDirect(url, title);
+    } else {
+      insertLinkText(url);
+    }
+    if (typed && !typed.melo) deleteCapturedMention(typed);
   }
-  if (typed && !typed.melo) deleteCapturedMention(typed);
   savedMention = null;
   mentionActive = false;
   dispatchMention({ active: false });

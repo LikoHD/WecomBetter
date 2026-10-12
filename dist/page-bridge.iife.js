@@ -842,6 +842,73 @@
     if (range?.gcpBegin !== located.start || range.len !== located.len) return null;
     return located.melo;
   }
+  function smartCanvas() {
+    const get = window.__getInstance;
+    if (typeof get !== "function") return null;
+    try {
+      const canvas = {
+        selection: get("TextSelectionStore"),
+        trigger: get("CharTriggerController"),
+        link: get("LinkController"),
+        data: get("DataService")
+      };
+      const ready = typeof canvas.link?.insertLinkFromDialog === "function" && typeof canvas.link.updateLinkInfoByApi === "function" && typeof canvas.trigger?.endTrigger === "function" && typeof canvas.data?.dispatch === "function";
+      return ready ? canvas : null;
+    } catch {
+      return null;
+    }
+  }
+  function canvasText(title) {
+    let text = "";
+    for (const token of Array.from(title || [])) text += String(token?.[0] ?? "");
+    return text;
+  }
+  function canvasMentionRange(canvas, captured) {
+    const text = String(captured?.text || "").replace(/[\u200b-\u200d\u2060\ufeff]/g, "");
+    const selection = canvas.selection?.multiSelection;
+    const store = selection?.start?.store;
+    if (!text.startsWith("@") || !store || selection.end?.store !== store) return null;
+    const end = Number(selection.end.index);
+    const start = end - text.length;
+    if (Number(selection.start.index) !== end || start < 0) return null;
+    if (canvasText(store.title).slice(start, end) !== text) return null;
+    return { store, start, end, text };
+  }
+  function insertCanvasLink(canvas, captured, url, title) {
+    const range = canvasMentionRange(canvas, captured);
+    if (!range) return false;
+    const { store, start, end } = range;
+    const name = title || url;
+    canvas.trigger.endTrigger();
+    let quoted = false;
+    try {
+      canvas.data.dispatch(function(command) {
+        quoted = canvas.link.insertLinkFromDialog({
+          selection: { start: { store, index: start }, end: { store, index: end } },
+          text: name,
+          link: url,
+          command
+        });
+      });
+    } catch {
+      return false;
+    }
+    if (canvasText(store.title).slice(start, end) === range.text) return false;
+    if (quoted) return true;
+    window.setTimeout(async function() {
+      try {
+        await canvas.link.updateLinkInfoByApi({
+          type: "IconLink",
+          linkUrl: url,
+          linkName: name,
+          store,
+          selection: { startIndex: start, endIndex: start + 1 }
+        });
+      } catch {
+      }
+    }, 0);
+    return true;
+  }
   function dispatchMention(detail) {
     document.dispatchEvent(
       new CustomEvent(MENTION_EVENT, {
@@ -1106,16 +1173,21 @@
     if (!parseDocUrl(url)) return;
     const typed = mentionTarget();
     if (typed?.melo && !selectMeloMention(typed)) return;
-    if (typed && !typed.melo) {
-      armMention(typed, false);
-      deleteCapturedMention(typed);
-    }
-    if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
-      pasteLinkDirect(url, title);
+    const canvas = typed?.melo ? null : smartCanvas();
+    if (canvas) {
+      if (!insertCanvasLink(canvas, typed, url, title)) return;
     } else {
-      insertLinkText(url);
+      if (typed && !typed.melo) {
+        armMention(typed, false);
+        deleteCapturedMention(typed);
+      }
+      if (typeof window.pad?.editor?.clipboardManager?.pasteFromDirectCall === "function") {
+        pasteLinkDirect(url, title);
+      } else {
+        insertLinkText(url);
+      }
+      if (typed && !typed.melo) deleteCapturedMention(typed);
     }
-    if (typed && !typed.melo) deleteCapturedMention(typed);
     savedMention = null;
     mentionActive = false;
     dispatchMention({ active: false });
